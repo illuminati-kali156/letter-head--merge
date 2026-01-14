@@ -3,26 +3,144 @@ import fitz  # PyMuPDF
 import os
 from pdf2docx import Converter
 import time
-import tempfile # <--- SECURITY FIX
+import tempfile
 
-# --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="Smart Merge Tool", page_icon="🔒", layout="centered")
+# --- 1. PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Fusion Doc Merger",
+    page_icon="⚡",
+    layout="centered"
+)
 
-# --- UI CSS ---
+# --- 2. ADVANCED CSS STYLING (The "Cool" Part) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f8f9fa; font-family: sans-serif; }
-    .upload-card { background-color: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    h1 { text-align: center; color: #1a1a1a; }
-    .stButton>button { background-color: #2563eb; color: white; border-radius: 8px; height: 50px; font-weight: 600; width: 100%; border: none; }
-    .stButton>button:hover { background-color: #1d4ed8; }
+    /* RESET & BACKGROUND */
+    .stApp {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+        font-family: 'Inter', sans-serif;
+        color: #f8fafc;
+    }
+
+    /* HEADINGS */
+    h1 {
+        font-weight: 800;
+        background: -webkit-linear-gradient(0deg, #818cf8, #c084fc);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    p.subtitle {
+        text-align: center;
+        color: #94a3b8;
+        font-size: 1.1rem;
+        margin-bottom: 40px;
+    }
+
+    /* GLASS CARDS (Upload Sections) */
+    .glass-card {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 25px;
+        border-radius: 16px;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    .glass-card:hover {
+        transform: translateY(-5px);
+        border-color: rgba(129, 140, 248, 0.5);
+    }
+    .card-title {
+        color: #e2e8f0;
+        font-weight: 600;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9rem;
+    }
+
+    /* CUSTOMIZE STREAMLIT UPLOADERS */
+    div[data-testid="stFileUploader"] {
+        width: 100%;
+    }
+    div[data-testid="stFileUploader"] section {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px dashed #475569;
+    }
+    div[data-testid="stFileUploader"] section:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: #818cf8;
+    }
+    /* Force text color in uploader to be white */
+    div[data-testid="stFileUploader"] span {
+        color: #e2e8f0 !important;
+    }
+    div[data-testid="stFileUploader"] small {
+        color: #94a3b8 !important;
+    }
+
+    /* RADIO BUTTONS */
+    div[role="radiogroup"] {
+        background: rgba(30, 41, 59, 0.4);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        justify-content: center;
+    }
+    div[role="radiogroup"] label {
+        color: white !important;
+        font-weight: 500;
+        padding: 0 20px;
+    }
+
+    /* MAIN ACTION BUTTON */
+    .stButton > button {
+        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+        color: white;
+        border: none;
+        padding: 18px 30px;
+        font-size: 18px;
+        font-weight: 700;
+        border-radius: 12px;
+        width: 100%;
+        margin-top: 20px;
+        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5);
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.6);
+        color: white;
+    }
+    .stButton > button:active {
+        transform: scale(0.98);
+    }
+
+    /* DOWNLOAD BUTTONS */
+    .stDownloadButton > button {
+        background-color: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px;
+        transition: all 0.2s;
+    }
+    .stDownloadButton > button:hover {
+        border-color: #818cf8;
+        color: #818cf8;
+        background-color: #0f172a;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- SECURE LOGIC ---
-
+# --- 3. SECURE LOGIC ---
 def get_visible_content_bottom(page):
-    """Scans a PDF page to find the lowest content."""
     max_y = 0
     for block in page.get_text("blocks"):
         if block[3] > max_y: max_y = block[3]
@@ -33,125 +151,126 @@ def get_visible_content_bottom(page):
     return max_y
 
 def process_merge(header_file, data_file, mode):
-    # 1. SECURITY: Create Unique Temp Files
-    # delete=False is required because we need to close the file to let PyMuPDF open it
+    # Secure Temp Files
     t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    
-    # Define output paths (also unique logic recommended, but local path ok for Streamlit return)
     out_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
     out_docx = tempfile.NamedTemporaryFile(delete=False, suffix=".docx").name
 
     try:
-        # Write uploaded binary data to the unique temp files
-        t_header.write(header_file.getbuffer())
-        t_data.write(data_file.getbuffer())
-        
-        # Close the file handles so other libraries can access them
-        t_header.close()
-        t_data.close()
+        t_header.write(header_file.getbuffer()); t_header.close()
+        t_data.write(data_file.getbuffer()); t_data.close()
 
-        # --- BUG CHECK: Open Files Safely ---
         try:
             header_doc = fitz.open(t_header.name)
             data_doc = fitz.open(t_data.name)
-        except Exception:
-            return None, None, "Files are corrupt or Password Protected. Please unlock them first."
+        except:
+            return None, None, "File Corrupt or Locked."
 
         out_doc = fitz.open()
-
-        # Layout Calc
         header_page = header_doc[0]
         page_width = header_page.rect.width
         page_height = header_page.rect.height
-        header_bottom = get_visible_content_bottom(header_page)
-        start_y = header_bottom + 20 
-
-        # Rectangles
-        full_rect = fitz.Rect(0, 0, page_width, page_height)
-        data_rect = fitz.Rect(0, start_y, page_width, page_height)
-
-        apply_all = (mode == "All Pages")
-
-        # --- MERGE LOOP ---
+        
+        start_y = get_visible_content_bottom(header_page) + 20 
+        
+        apply_all = (mode == "Apply to All Pages")
+        
         for i in range(len(data_doc)):
             if i == 0 or apply_all:
-                new_page = out_doc.new_page(width=page_width, height=page_height)
-                new_page.show_pdf_page(full_rect, header_doc, 0)
-                new_page.show_pdf_page(data_rect, data_doc, i)
+                page = out_doc.new_page(width=page_width, height=page_height)
+                page.show_pdf_page(fitz.Rect(0,0,page_width,page_height), header_doc, 0)
+                page.show_pdf_page(fitz.Rect(0,start_y,page_width,page_height), data_doc, i)
             else:
                 out_doc.insert_pdf(data_doc, from_page=i, to_page=i)
 
         out_doc.save(out_pdf)
-        
-        # Close handles
-        header_doc.close()
-        data_doc.close()
-        out_doc.close()
+        header_doc.close(); data_doc.close(); out_doc.close()
 
-        # Word Conversion
         cv = Converter(out_pdf)
         cv.convert(out_docx)
         cv.close()
 
-        return out_pdf, out_docx, None # None = No Error
+        return out_pdf, out_docx, None
 
     except Exception as e:
         return None, None, str(e)
-        
     finally:
-        # 2. SECURITY: Force Cleanup
-        # Regardless of errors, delete the temp input files
         if os.path.exists(t_header.name): os.remove(t_header.name)
         if os.path.exists(t_data.name): os.remove(t_data.name)
 
-# --- UI ---
+# --- 4. THE UI LAYOUT ---
 
-st.markdown("<h1>🔒 Secure Document Merger</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #666;'>Your files are processed securely in isolated sessions.</p>", unsafe_allow_html=True)
+st.markdown("<h1>⚡ FUSION DOC MERGER</h1>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>The professional way to brand your documents.</p>", unsafe_allow_html=True)
 
+# Layout: 2 Columns for Uploads
 col1, col2 = st.columns(2)
+
 with col1:
-    st.markdown('<div class="upload-card"><h3>1. Letterhead PDF</h3>', unsafe_allow_html=True)
-    up_h = st.file_uploader("Upload Letterhead", type="pdf", label_visibility="collapsed", key="h")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class='glass-card'>
+        <div class='card-title'>1. Upload Letterhead</div>
+    </div>
+    """, unsafe_allow_html=True)
+    up_h = st.file_uploader("Header", type="pdf", label_visibility="collapsed", key="h")
 
 with col2:
-    st.markdown('<div class="upload-card"><h3>2. Content PDF</h3>', unsafe_allow_html=True)
-    up_d = st.file_uploader("Upload Content", type="pdf", label_visibility="collapsed", key="d")
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class='glass-card'>
+        <div class='card-title'>2. Upload Content</div>
+    </div>
+    """, unsafe_allow_html=True)
+    up_d = st.file_uploader("Data", type="pdf", label_visibility="collapsed", key="d")
 
-st.write("")
-merge_mode = st.radio("Configuration", ["First Page Only", "All Pages"], horizontal=True)
-st.write("")
+st.write("") # Gap
 
-if st.button("Merge Files"):
+# Settings Section
+st.markdown("<div style='text-align: center; color: #94a3b8; font-size: 0.8rem; margin-bottom: 5px;'>CONFIGURATION</div>", unsafe_allow_html=True)
+merge_mode = st.radio(
+    "Settings",
+    ["Apply to First Page Only", "Apply to All Pages"],
+    horizontal=True,
+    label_visibility="collapsed"
+)
+
+st.write("") # Gap
+
+# Action Button
+if st.button("INITIALIZE MERGE 🚀"):
     if up_h and up_d:
-        with st.status("Processing Securely...", expanded=True) as status:
-            st.write("Creating Isolated Session...")
+        with st.status("Processing Data...", expanded=True) as status:
+            st.write("🔹 Securely reading files...")
             time.sleep(0.3)
-            st.write("Merging Data...")
+            st.write("🔹 Calculating layout vectors...")
             
-            pdf_path, docx_path, error_msg = process_merge(up_h, up_d, merge_mode)
+            pdf, docx, err = process_merge(up_h, up_d, merge_mode)
             
-            if error_msg:
-                status.update(label="Error Failed", state="error", expanded=True)
-                st.error(f"❌ Error: {error_msg}")
+            if err:
+                status.update(label="Failed", state="error")
+                st.error(f"Error: {err}")
             else:
                 status.update(label="Complete!", state="complete", expanded=False)
                 st.balloons()
-                st.success("✅ Secure Merge Complete.")
                 
-                c1, c2 = st.columns(2)
-                with c1:
-                    with open(pdf_path, "rb") as f:
-                        st.download_button("Download PDF", f, "Merged_Doc.pdf", "application/pdf", use_container_width=True)
-                with c2:
-                    with open(docx_path, "rb") as f:
-                        st.download_button("Download Word", f, "Merged_Doc.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                # Success Area
+                st.markdown("""
+                <div style='background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; padding: 15px; border-radius: 10px; text-align: center; margin-top: 20px;'>
+                    <h3 style='color: #10b981; margin:0;'>✅ Success! Files Ready.</h3>
+                </div>
+                """, unsafe_allow_html=True)
                 
-                # Cleanup Output files after reading
-                os.remove(pdf_path)
-                os.remove(docx_path)
+                # Downloads
+                st.write("")
+                d1, d2 = st.columns(2)
+                with d1:
+                    with open(pdf, "rb") as f:
+                        st.download_button("⬇ Download PDF", f, "Merged.pdf", "application/pdf", use_container_width=True)
+                with d2:
+                    with open(docx, "rb") as f:
+                        st.download_button("⬇ Download Word", f, "Merged.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                
+                # Cleanup
+                os.remove(pdf); os.remove(docx)
     else:
-        st.warning("⚠️ Please upload both files.")
+        st.toast("⚠️ Please upload both files first!", icon="⚠️")
