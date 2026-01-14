@@ -6,95 +6,93 @@ import time
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="CYBER MERGE TOOL",
-    page_icon="🛡️",
-    layout="centered",
-    initial_sidebar_state="collapsed"
+    page_title="Smart Merge Tool",
+    page_icon="📄",
+    layout="centered"
 )
 
-# --- CYBER THEME CSS ---
+# --- MODERN UI CSS ---
 st.markdown("""
     <style>
-    /* MAIN BACKGROUND */
+    /* General Background */
     .stApp {
-        background-color: #0e1117;
-        color: #00ff41;
-        font-family: 'Courier New', Courier, monospace;
+        background-color: #f8f9fa;
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
     
-    /* HEADERS */
-    h1, h2, h3 {
-        color: #00ff41 !important;
-        text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
-        font-family: 'Courier New', Courier, monospace;
+    /* Card Container for Uploads */
+    .upload-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
     }
     
-    /* FILE UPLOADER */
+    /* Headers */
+    h1 {
+        color: #1a1a1a;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: -0.5px;
+    }
+    h3 {
+        color: #4a4a4a;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    /* Customizing Streamlit's File Uploader */
     div[data-testid="stFileUploader"] {
-        border: 1px solid #00ff41;
-        background-color: #1c1f26;
-        padding: 15px;
-        border-radius: 5px;
-    }
-    div[data-testid="stFileUploader"] section {
-        background-color: #1c1f26;
-    }
-    div[data-testid="stFileUploader"] span {
-        color: #ffffff !important; 
-    }
-    
-    /* RADIO BUTTONS */
-    div[role="radiogroup"] label {
-        color: white !important;
-        background-color: #1c1f26;
-        border: 1px solid #333;
         padding: 10px;
-        border-radius: 5px;
-        margin-bottom: 5px;
-    }
-    div[role="radiogroup"] {
-        background-color: transparent;
     }
     
-    /* BUTTONS */
+    /* Primary Button Styling */
     .stButton>button {
+        background-color: #2563eb; /* Royal Blue */
+        color: white;
+        border-radius: 8px;
+        height: 50px;
+        font-weight: 600;
+        font-size: 16px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        transition: all 0.2s ease;
         width: 100%;
-        background-color: transparent;
-        color: #00ff41;
-        border: 2px solid #00ff41;
-        font-weight: bold;
-        padding: 15px;
-        text-transform: uppercase;
-        transition: all 0.3s ease;
-        border-radius: 0px;
     }
     .stButton>button:hover {
-        background-color: #00ff41;
-        color: black;
-        box-shadow: 0 0 20px #00ff41;
-    }
-
-    /* DOWNLOAD BUTTONS */
-    .stDownloadButton>button {
-        background-color: #1c1f26;
-        color: white;
-        border: 1px solid white;
-    }
-    .stDownloadButton>button:hover {
-        border-color: #00ff41;
-        color: #00ff41;
+        background-color: #1d4ed8;
+        box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+        transform: translateY(-1px);
     }
     
-    /* TEXT ELEMENTS */
-    .instruction-text {
-        color: #cccccc;
-        font-size: 14px;
-        margin-bottom: 5px;
+    /* Radio Button Container */
+    .radio-container {
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+    }
+    
+    /* Download Button Styling */
+    .stDownloadButton>button {
+        background-color: white;
+        color: #1a1a1a;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+    .stDownloadButton>button:hover {
+        border-color: #2563eb;
+        color: #2563eb;
+        background-color: #eff6ff;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIC FUNCTIONS ---
+# --- LOGIC FUNCTIONS (Unchanged) ---
 
 def get_visible_content_bottom(page):
     """Scans a PDF page to find the lowest content."""
@@ -135,23 +133,19 @@ def process_merge(header_file, data_file, mode):
         full_rect = fitz.Rect(0, 0, page_width, page_height)
         data_rect = fitz.Rect(0, start_y, page_width, page_height)
 
-        # Logic based on Radio Button Selection
         apply_all = (mode == "All Pages")
 
         for i in range(len(data_doc)):
-            # Apply Header if it's Page 1 OR if User selected "All Pages"
             if i == 0 or apply_all:
                 new_page = out_doc.new_page(width=page_width, height=page_height)
-                new_page.show_pdf_page(full_rect, header_doc, 0) # Background
-                new_page.show_pdf_page(data_rect, data_doc, i)   # Foreground
+                new_page.show_pdf_page(full_rect, header_doc, 0)
+                new_page.show_pdf_page(data_rect, data_doc, i)
             else:
-                # Copy original page as-is
                 out_doc.insert_pdf(data_doc, from_page=i, to_page=i)
 
         out_doc.save(out_pdf)
         header_doc.close(); data_doc.close(); out_doc.close()
 
-        # Word Conversion
         cv = Converter(out_pdf)
         cv.convert(out_docx)
         cv.close()
@@ -162,61 +156,62 @@ def process_merge(header_file, data_file, mode):
         return out_pdf, out_docx
 
     except Exception as e:
-        st.error(f"SYSTEM ERROR: {e}")
+        st.error(f"Error: {e}")
         return None, None
 
 # --- UI LAYOUT ---
 
-st.markdown("# 🖥️ CYBER DOCUMENT MERGER")
-st.markdown("### // SYSTEM STATUS: ONLINE")
-st.divider()
+st.markdown("<h1>📄 Document Merger Pro</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #666; margin-bottom: 30px;'>Combine your Letterhead & Content seamlessly.</p>", unsafe_allow_html=True)
 
+# 1. UPLOAD SECTION (Two Cards)
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("<p class='instruction-text'>[INPUT 1] UPLOAD LETTERHEAD</p>", unsafe_allow_html=True)
-    up_h = st.file_uploader("HEADER", type="pdf", label_visibility="collapsed", key="h")
+    st.markdown('<div class="upload-card"><h3>1. Letterhead PDF</h3>', unsafe_allow_html=True)
+    up_h = st.file_uploader("Upload Letterhead", type="pdf", label_visibility="collapsed", key="h")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
-    st.markdown("<p class='instruction-text'>[INPUT 2] UPLOAD CONTENT DATA</p>", unsafe_allow_html=True)
-    up_d = st.file_uploader("DATA", type="pdf", label_visibility="collapsed", key="d")
+    st.markdown('<div class="upload-card"><h3>2. Content PDF</h3>', unsafe_allow_html=True)
+    up_d = st.file_uploader("Upload Content", type="pdf", label_visibility="collapsed", key="d")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-st.divider()
-
-# --- RADIO BUTTONS ---
-st.markdown("<p class='instruction-text'>[CONFIGURATION] SELECT HEADER MODE</p>", unsafe_allow_html=True)
+# 2. SETTINGS SECTION
+st.markdown('<div class="radio-container"><h3>⚙️ Configuration</h3>', unsafe_allow_html=True)
 merge_mode = st.radio(
-    "Select Header Mode",
+    "How should the letterhead be applied?",
     ["First Page Only", "All Pages"],
-    label_visibility="collapsed"
+    horizontal=True
 )
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.write("") # Spacer
 
-# --- EXECUTE BUTTON ---
-if st.button(">>> INITIALIZE MERGE SEQUENCE <<<"):
+# 3. ACTION BUTTON
+if st.button("Merge & Convert Files"):
     if up_h and up_d:
-        with st.status("PROCESSING DATA STREAM...", expanded=True) as status:
-            st.write("Reading Binary Data...")
+        with st.status("Processing...", expanded=True) as status:
+            st.write("Analyzing Document Structure...")
             time.sleep(0.5)
-            st.write("Analyzing Vector Layout...")
-            time.sleep(0.5)
-            st.write("Compiling PDF Structure...")
+            st.write("Merging Layers...")
             
             pdf_path, docx_path = process_merge(up_h, up_d, merge_mode)
             
             if pdf_path:
-                status.update(label="OPERATION SUCCESSFUL", state="complete", expanded=False)
-                
-                st.success("✅ DATA MERGE COMPLETE.")
+                status.update(label="Complete!", state="complete", expanded=False)
                 st.balloons()
                 
-                c1, c2 = st.columns(2)
-                with c1:
+                # Success Message Area
+                st.success("✅ Files generated successfully!")
+                
+                # Download Buttons
+                d_col1, d_col2 = st.columns(2)
+                with d_col1:
                     with open(pdf_path, "rb") as f:
-                        st.download_button("⬇ DOWNLOAD PDF", f, "Merged_Secure.pdf", "application/pdf")
-                with c2:
+                        st.download_button("Download PDF", f, "Merged_Doc.pdf", "application/pdf", use_container_width=True)
+                with d_col2:
                     with open(docx_path, "rb") as f:
-                        st.download_button("⬇ DOWNLOAD WORD", f, "Merged_Editable.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+                        st.download_button("Download Word Doc", f, "Merged_Doc.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
     else:
-        st.error("⚠️ INPUT ERROR: MISSING REQUIRED FILES")
+        st.warning("⚠️ Please upload both the Letterhead and Content files to continue.")
