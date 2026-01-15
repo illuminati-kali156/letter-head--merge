@@ -202,7 +202,7 @@ def verify_password_hash(input_pass):
     CORRECT_HASH = "628e41e64c14ca3498d99dad723852dc446fd56dc555a3f5a91117da51d90469"
     
     input_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
-    return input_hash.lower() == CORRECT_HASH
+    return input_hash == CORRECT_HASH
 
 def check_password_callback():
     if verify_password_hash(st.session_state.password_input):
