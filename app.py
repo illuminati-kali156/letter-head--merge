@@ -232,7 +232,7 @@ if st.session_state.auth_status != "unlocked":
             st.text_input("Enter Passkey (पासवर्ड)", type="password", key="password_input", on_change=check_password_callback)
             if st.session_state.login_msg:
                 st.error(st.session_state.login_msg)
-            st.caption("Key: bio-gas")
+            st.caption("Hint: Which gas will be produced in this process")
 
         elif st.session_state.auth_status == "puzzle":
             # STEP 2: PUZZLE
