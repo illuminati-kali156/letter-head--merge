@@ -8,8 +8,8 @@ import hashlib
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Super AAI BIO Energy",
-    page_icon="⚡",
+    page_title="Super AAI Bio Energy",
+    page_icon="🌾",
     layout="centered"
 )
 
@@ -21,97 +21,151 @@ if "puzzle_sequence" not in st.session_state:
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
 
-# --- 3. HIGH-CONTRAST "CYBER-NATURE" THEME ---
+# --- 3. "FARM & NATURE" THEME ENGINE ---
 st.markdown("""
     <style>
-    /* GLOBAL DARK THEME - DEEP BLACK BACKGROUND */
+    /* --- 1. BACKGROUND & COLORS --- */
     .stApp {
-        background-color: #000000;
-        color: #00ff41; /* Bright Neon Green Text */
-        font-family: 'Courier New', Courier, monospace;
+        background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 50%, #e8f5e9 100%);
+        font-family: 'Verdana', sans-serif;
+        color: #1b5e20;
     }
 
-    /* NEON CARDS (High Visibility) */
-    .neon-card {
-        background: #0a0a0a; /* Almost Black */
-        border: 2px solid #00ff41; /* Bright Border */
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+    /* --- 2. CUSTOM CURSOR (TRACTOR) --- */
+    /* We use an emoji cursor for simplicity & reliability */
+    button:hover {
+        cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>🚜</text></svg>") 16 0, auto; 
+    }
+
+    /* --- 3. ANIMATIONS --- */
+    
+    /* Falling Leaves */
+    @keyframes leaf-fall {
+        0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+        10% { opacity: 1; }
+        100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+    }
+    .leaf {
+        position: fixed;
+        font-size: 20px;
+        color: #2e7d32;
+        animation: leaf-fall 10s linear infinite;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    /* Moving Clouds */
+    @keyframes cloud-move {
+        0% { transform: translateX(-10vw); opacity: 0; }
+        10% { opacity: 0.8; }
+        90% { opacity: 0.8; }
+        100% { transform: translateX(110vw); opacity: 0; }
+    }
+    .cloud {
+        position: fixed;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 60px;
+        animation: cloud-move 20s linear infinite;
+        z-index: 0;
+        pointer-events: none;
+        top: 10%;
+    }
+
+    /* Gentle Rain */
+    @keyframes rain-drop {
+        0% { transform: translateY(-10vh); opacity: 0; }
+        50% { opacity: 0.5; }
+        100% { transform: translateY(110vh); opacity: 0; }
+    }
+    .rain {
+        position: fixed;
+        width: 2px;
+        height: 15px;
+        background: rgba(0, 0, 255, 0.2);
+        animation: rain-drop 2s linear infinite;
+        z-index: 0;
+    }
+
+    /* --- 4. CARDS (Frosted Glass) --- */
+    .farm-card {
+        background: rgba(255, 255, 255, 0.75);
+        backdrop-filter: blur(8px);
+        border: 2px solid #a5d6a7;
+        border-radius: 20px;
         padding: 30px;
-        border-radius: 15px;
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         text-align: center;
         margin-bottom: 20px;
     }
 
-    /* TYPOGRAPHY - 100% VISIBLE */
+    /* --- 5. TYPOGRAPHY & INPUTS --- */
     h1 {
-        color: #ffffff !important; /* White Headers */
-        text-shadow: 0 0 10px #00ff41;
+        color: #1b5e20;
         font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        text-align: center;
+        text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
     }
-    
-    /* Force all paragraph text to be bright green */
-    p, label, span, div {
-        color: #00ff41 !important; 
+    p, label {
+        color: #2e7d32 !important;
         font-weight: 600;
     }
     
-    /* Special override for hints */
-    .caption {
-        color: #a3ffac !important; /* Lighter green for small text */
-    }
-
-    /* INPUT FIELDS */
     .stTextInput input {
-        background-color: #000000 !important;
-        border: 2px solid #00ff41 !important;
-        color: #ffffff !important; /* White text input */
+        background-color: #ffffff !important;
+        border: 2px solid #4caf50 !important;
+        color: #1b5e20 !important;
         text-align: center;
+        border-radius: 12px;
         font-weight: bold;
-        font-size: 16px;
     }
 
-    /* BUTTONS */
+    /* --- 6. BUTTONS --- */
     .stButton button {
-        background: #000000;
-        color: #00ff41;
-        border: 2px solid #00ff41;
-        width: 100%;
-        padding: 15px;
+        background: linear-gradient(145deg, #66bb6a, #43a047);
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 15px 32px;
         font-weight: bold;
-        font-size: 16px;
-        text-transform: uppercase;
-        transition: all 0.2s ease-in-out;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
     }
     .stButton button:hover {
-        background: #00ff41;
-        color: #000000;
-        box-shadow: 0 0 20px #00ff41;
-        border-color: #ffffff;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+        background: linear-gradient(145deg, #81c784, #4caf50);
     }
     
-    /* DISABLED BUTTONS (Selected State) */
+    /* Disabled Button (Selected State) */
     .stButton button:disabled {
-        background-color: #003300;
-        color: #00ff41;
-        border-color: #005500;
-        opacity: 1; /* Keep it visible */
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border: 2px solid #2e7d32;
+        opacity: 1;
     }
 
-    /* UPLOAD AREA */
+    /* --- 7. UPLOAD BOX --- */
     div[data-testid="stFileUploader"] {
-        border: 2px dashed #00ff41;
-        background: #050505;
-        padding: 15px;
-        border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.6);
+        border: 2px dashed #4caf50;
+        border-radius: 15px;
+        padding: 10px;
     }
 
-    /* HIDE STREAMLIT UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
+
+    <div class="cloud" style="top: 5%; animation-duration: 25s; left: -10%;">☁️</div>
+    <div class="cloud" style="top: 15%; animation-duration: 35s; left: -20%; font-size: 40px;">☁️</div>
+    
+    <div class="leaf" style="left: 10%; animation-duration: 8s;">🍃</div>
+    <div class="leaf" style="left: 30%; animation-duration: 12s; font-size: 24px;">🍂</div>
+    <div class="leaf" style="left: 70%; animation-duration: 10s;">🍃</div>
+    <div class="leaf" style="left: 90%; animation-duration: 15s; font-size: 18px;">🍂</div>
+
+    <div class="rain" style="left: 20%; animation-duration: 1.5s;"></div>
+    <div class="rain" style="left: 50%; animation-duration: 2s;"></div>
+    <div class="rain" style="left: 80%; animation-duration: 1.2s;"></div>
 """, unsafe_allow_html=True)
 
 # --- 4. BACKEND LOGIC ---
@@ -180,74 +234,73 @@ def process_merge(header_file, data_file, mode):
 # --- 5. AUTH & PUZZLE ---
 
 def verify_password_hash(input_pass):
-    # Hash for "bio-energy" (Provided by you)
+    # Hash for "bio-energy"
     CORRECT_HASH = "628e41e64c14ca3498d99dad723852dc446fd56dc555a3f5a91117da51d90469"
     return hashlib.sha256(input_pass.strip().encode()).hexdigest() == CORRECT_HASH
 
 def check_password_callback():
-    # NO st.rerun() here! It happens automatically.
     if verify_password_hash(st.session_state.password_input):
         st.session_state.auth_status = "puzzle"
         st.session_state.login_msg = ""
     else:
-        st.session_state.login_msg = "❌ ACCESS DENIED (चुकीचा पासवर्ड)"
+        st.session_state.login_msg = "❌ Incorrect Password (चुकीचा पासवर्ड)"
 
 def puzzle_click(icon):
     st.session_state.puzzle_sequence.append(icon)
     
-    # Sequence: Feedstock -> Digestion -> Energy
+    # Target: Feedstock -> Digestion -> Energy
     target = ["🌽", "🫧", "⚡"]
     current_idx = len(st.session_state.puzzle_sequence) - 1
     
-    # 1. Bounds Check
+    # Safety Check
     if current_idx >= len(target):
         st.session_state.puzzle_sequence = []
-        st.toast("⚠️ System Reset", icon="🔄")
+        st.toast("⚠️ Resetting...", icon="🔄")
         return
 
-    # 2. Correctness Check
+    # Logic Check
     if st.session_state.puzzle_sequence[current_idx] != target[current_idx]:
         st.session_state.puzzle_sequence = []
-        st.toast("⚠️ Wrong Sequence! (चुकीचा क्रम)", icon="❌")
+        st.toast("⚠️ Wrong Step! (चुकीची पायरी)", icon="❌")
         return
 
-    # 3. Completion Check
+    # Completion Check
     if len(st.session_state.puzzle_sequence) == 3:
         st.session_state.auth_status = "unlocked"
 
-# --- 6. LOGIN UI ---
+# --- 6. UI: LOGIN SCREEN ---
 
 if st.session_state.auth_status != "unlocked":
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
-        st.markdown("<h1>⚡ BIO-CORE</h1>", unsafe_allow_html=True)
+        st.markdown("<div class='farm-card'>", unsafe_allow_html=True)
+        # HEADER
+        st.markdown("<h1>🌾 Bio-Energy Farm</h1>", unsafe_allow_html=True)
         st.markdown("<p style='font-size:0.9em;'>Super AAI Bio Energy Pvt Ltd</p>", unsafe_allow_html=True)
         st.markdown("---")
 
         if st.session_state.auth_status == "locked":
-            # PASSWORD SCREEN
-            st.text_input("ENTER PASSKEY", type="password", key="password_input", on_change=check_password_callback)
+            # PASSKEY INPUT
+            st.text_input("Enter Passkey (पासवर्ड)", type="password", key="password_input", on_change=check_password_callback)
             if st.session_state.login_msg:
                 st.error(st.session_state.login_msg)
 
         elif st.session_state.auth_status == "puzzle":
-            # PUZZLE SCREEN
-            st.markdown("### 🧬 REACTOR STARTUP")
-            st.markdown("<p class='caption'>Sequence: Feedstock → Digestion → Energy</p>", unsafe_allow_html=True)
-            st.markdown("<p class='caption'>(कच्चा माल → प्रक्रिया → ऊर्जा)</p>", unsafe_allow_html=True)
+            # PUZZLE INPUT
+            st.markdown("### 🚜 Start Process")
+            st.caption("Feedstock → Digestion → Energy")
+            st.caption("(कच्चा माल → प्रक्रिया → ऊर्जा)")
             
-            # Button Logic: If clicked, show "CHECKED" version and Disable it
+            # Interactive Buttons
             seq = st.session_state.puzzle_sequence
             
-            # Labels change based on selection
+            # Button States
             l_corn = "✅ 🌽" if "🌽" in seq else "🌽"
             l_bub  = "✅ 🫧" if "🫧" in seq else "🫧"
             l_bolt = "✅ ⚡" if "⚡" in seq else "⚡"
             
-            # Disable if already in sequence
             d_corn = "🌽" in seq
             d_bub  = "🫧" in seq
             d_bolt = "⚡" in seq
@@ -263,13 +316,13 @@ if st.session_state.auth_status != "unlocked":
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# --- 7. MAIN DASHBOARD ---
+# --- 7. UI: DASHBOARD ---
 
-st.markdown("<h1>Super AAI BIO Energy</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>OFFICIAL DOCUMENT MERGER SYSTEM</p>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>Super AAI BIO Energy PVT LTD</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Secure Document Portal</p>", unsafe_allow_html=True)
 
 # Logout
-if st.sidebar.button("🔒 LOGOUT"):
+if st.sidebar.button("🔒 Logout"):
     st.session_state.auth_status = "locked"
     st.session_state.puzzle_sequence = []
     st.rerun()
@@ -279,11 +332,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 # Uploads
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown("<div class='neon-card'><h3>📄 LETTERHEAD</h3><p>Upload Company Header</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='farm-card'><h3>📄 Letterhead</h3><p>Upload Header PDF</p></div>", unsafe_allow_html=True)
     up_h = st.file_uploader("Header", type="pdf", label_visibility="collapsed", key="h")
 
 with col2:
-    st.markdown("<div class='neon-card'><h3>📝 CONTENT</h3><p>Upload Document Body</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='farm-card'><h3>📝 Content</h3><p>Upload Body PDF</p></div>", unsafe_allow_html=True)
     up_d = st.file_uploader("Data", type="pdf", label_visibility="collapsed", key="d")
 
 # Settings
@@ -291,46 +344,46 @@ st.markdown("<br>", unsafe_allow_html=True)
 c1, c2 = st.columns(2)
 
 with c1:
-    st.markdown("### ⚙️ SETTINGS")
+    st.markdown("### ⚙️ Settings")
     mode = st.radio("Header Mode", ["Apply to First Page Only", "Apply to All Pages"])
 
 with c2:
-    st.markdown("### 🏷️ FILENAME")
-    custom_name = st.text_input("Output Filename:", value="Bio_Document")
+    st.markdown("### 🏷️ Filename")
+    custom_name = st.text_input("Output Name:", value="Bio_Farm_Doc")
 
-# Action
+# Generate
 st.markdown("<br>", unsafe_allow_html=True)
-if st.button(">>> GENERATE DOCUMENT <<<"):
+if st.button("🚜 GENERATE DOCUMENT (फाइल बनवा)"):
     if up_h and up_d:
-        with st.status("PROCESSING...", expanded=True) as status:
-            st.write("🔹 Reading Secure Files...")
+        with st.status("Processing... (प्रक्रिया सुरू आहे)", expanded=True) as status:
+            st.write("🌿 Reading Files...")
             time.sleep(0.5)
-            st.write("🔹 Merging Layers...")
+            st.write("⚙️ Merging Documents...")
             
             pdf, docx, err = process_merge(up_h, up_d, mode)
             
             if err:
-                status.update(label="ERROR", state="error")
+                status.update(label="Error", state="error")
                 st.error(f"Error: {err}")
             else:
-                status.update(label="SUCCESS", state="complete", expanded=False)
+                status.update(label="Success!", state="complete", expanded=False)
                 
-                # Filename logic
+                # Filename Cleaning
                 clean_name = "".join(x for x in custom_name if x.isalnum() or x in "_-")
                 if not clean_name: clean_name = "Document"
                 
                 st.balloons()
-                st.success("✅ FILES READY")
+                st.success("✅ Files Ready!")
                 
                 d1, d2 = st.columns(2)
                 with d1:
                     with open(pdf, "rb") as f:
-                        st.download_button("⬇ PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
+                        st.download_button("⬇ Download PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
                 with d2:
                     with open(docx, "rb") as f:
-                        st.download_button("⬇ WORD", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        st.download_button("⬇ Download Word", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
                 
                 os.remove(pdf)
                 os.remove(docx)
     else:
-        st.warning("⚠️ PLEASE UPLOAD BOTH FILES")
+        st.warning("⚠️ Please upload both files!")
