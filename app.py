@@ -199,7 +199,7 @@ def verify_password_hash(input_pass):
     clean_pass = input_pass.strip()
     
     # Hash for "bio-gas"
-    CORRECT_HASH = "a672727144415891392661578332997672223403310069007559190186259837"
+    CORRECT_HASH = "628e41e64c14ca3498d99dad723852dc446fd56dc555a3f5a91117da51d90469"
     
     input_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
     return input_hash.lower() == CORRECT_HASH
