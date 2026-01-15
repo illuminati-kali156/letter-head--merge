@@ -12,134 +12,136 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. ADVANCED CSS STYLING (The "Cool" Part) ---
+# --- 2. SESSION STATE SETUP (The Memory) ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "puzzle_sequence" not in st.session_state:
+    st.session_state.puzzle_sequence = []
+if "show_puzzle" not in st.session_state:
+    st.session_state.show_puzzle = False
+
+# --- 3. CSS STYLING (Glassmorphism + Security UI) ---
 st.markdown("""
     <style>
-    /* RESET & BACKGROUND */
     .stApp {
         background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
         font-family: 'Inter', sans-serif;
         color: #f8fafc;
     }
-
-    /* HEADINGS */
-    h1 {
-        font-weight: 800;
-        background: -webkit-linear-gradient(0deg, #818cf8, #c084fc);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    
+    /* Login Box Styling */
+    .login-container {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 40px;
+        border-radius: 20px;
         text-align: center;
-        margin-bottom: 10px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        margin-top: 50px;
     }
-    p.subtitle {
-        text-align: center;
-        color: #94a3b8;
-        font-size: 1.1rem;
-        margin-bottom: 40px;
+    
+    /* Puzzle Buttons */
+    .stButton button {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: white;
+        transition: all 0.3s;
+    }
+    .stButton button:hover {
+        background: rgba(255,255,255,0.2);
+        border-color: #818cf8;
+        transform: scale(1.1);
     }
 
-    /* GLASS CARDS (Upload Sections) */
+    /* Main App Styles (Glass Cards) */
     .glass-card {
         background: rgba(30, 41, 59, 0.4);
         backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         padding: 25px;
         border-radius: 16px;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
         margin-bottom: 20px;
-        transition: transform 0.2s;
-    }
-    .glass-card:hover {
-        transform: translateY(-5px);
-        border-color: rgba(129, 140, 248, 0.5);
-    }
-    .card-title {
-        color: #e2e8f0;
-        font-weight: 600;
-        margin-bottom: 15px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-size: 0.9rem;
-    }
-
-    /* CUSTOMIZE STREAMLIT UPLOADERS */
-    div[data-testid="stFileUploader"] {
-        width: 100%;
     }
     div[data-testid="stFileUploader"] section {
         background-color: rgba(255, 255, 255, 0.05);
-        border: 1px dashed #475569;
     }
-    div[data-testid="stFileUploader"] section:hover {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-color: #818cf8;
-    }
-    /* Force text color in uploader to be white */
     div[data-testid="stFileUploader"] span {
         color: #e2e8f0 !important;
-    }
-    div[data-testid="stFileUploader"] small {
-        color: #94a3b8 !important;
-    }
-
-    /* RADIO BUTTONS */
-    div[role="radiogroup"] {
-        background: rgba(30, 41, 59, 0.4);
-        padding: 15px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        display: flex;
-        justify-content: center;
-    }
-    div[role="radiogroup"] label {
-        color: white !important;
-        font-weight: 500;
-        padding: 0 20px;
-    }
-
-    /* MAIN ACTION BUTTON */
-    .stButton > button {
-        background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
-        color: white;
-        border: none;
-        padding: 18px 30px;
-        font-size: 18px;
-        font-weight: 700;
-        border-radius: 12px;
-        width: 100%;
-        margin-top: 20px;
-        box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5);
-        transition: all 0.3s ease;
-    }
-    .stButton > button:hover {
-        transform: scale(1.02);
-        box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.6);
-        color: white;
-    }
-    .stButton > button:active {
-        transform: scale(0.98);
-    }
-
-    /* DOWNLOAD BUTTONS */
-    .stDownloadButton > button {
-        background-color: #1e293b;
-        color: #e2e8f0;
-        border: 1px solid #334155;
-        border-radius: 8px;
-        padding: 12px;
-        transition: all 0.2s;
-    }
-    .stDownloadButton > button:hover {
-        border-color: #818cf8;
-        color: #818cf8;
-        background-color: #0f172a;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. SECURE LOGIC ---
+# --- 4. AUTHENTICATION LOGIC ---
+
+def check_password():
+    password = st.session_state.password_input
+    if password == "bio-gas":
+        st.session_state.show_puzzle = True
+        st.session_state.password_error = None
+    else:
+        st.session_state.password_error = "ACCESS DENIED: Incorrect Protocol."
+
+def puzzle_click(element):
+    st.session_state.puzzle_sequence.append(element)
+    
+    # THE SECRET SEQUENCE: Leaf -> Lightning -> Fire
+    correct_sequence = ["🍃", "⚡", "🔥"]
+    
+    # Check current progress
+    current_step = len(st.session_state.puzzle_sequence) - 1
+    
+    if st.session_state.puzzle_sequence[current_step] != correct_sequence[current_step]:
+        # Wrong click -> Reset
+        st.toast("⛔ Security Violation: Sequence Reset", icon="❌")
+        st.session_state.puzzle_sequence = []
+    
+    elif st.session_state.puzzle_sequence == correct_sequence:
+        # Success -> Unlock App
+        st.balloons()
+        st.session_state.authenticated = True
+        st.rerun()
+
+# --- 5. THE LOGIN SCREEN (If not authenticated) ---
+if not st.session_state.authenticated:
+    st.markdown("<h1 style='text-align: center; color: #818cf8;'>SECURE GATEWAY</h1>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
+        
+        # STEP 1: PASSWORD
+        if not st.session_state.show_puzzle:
+            st.text_input("ENTER ACCESS CODE", type="password", key="password_input", on_change=check_password)
+            if "password_error" in st.session_state and st.session_state.password_error:
+                st.error(st.session_state.password_error)
+        
+        # STEP 2: THE PUZZLE
+        else:
+            st.markdown("### 🔐 SECURITY CHALLENGE")
+            st.write("Complete the Bio-Energy Sequence.")
+            
+            p1, p2, p3 = st.columns(3)
+            with p1:
+                st.button("⚡", on_click=puzzle_click, args=("⚡",), use_container_width=True)
+            with p2:
+                st.button("🔥", on_click=puzzle_click, args=("🔥",), use_container_width=True)
+            with p3:
+                st.button("🍃", on_click=puzzle_click, args=("🍃",), use_container_width=True)
+                
+            st.caption("Hint: Nature -> Power -> Heat")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Stop execution here if not logged in
+    st.stop()
+
+
+# ==========================================
+#      MAIN APPLICATION (HIDDEN UNTIL LOGIN)
+# ==========================================
+
+# --- 6. CORE LOGIC (Secure) ---
 def get_visible_content_bottom(page):
     max_y = 0
     for block in page.get_text("blocks"):
@@ -199,44 +201,31 @@ def process_merge(header_file, data_file, mode):
         if os.path.exists(t_header.name): os.remove(t_header.name)
         if os.path.exists(t_data.name): os.remove(t_data.name)
 
-# --- 4. THE UI LAYOUT ---
+
+# --- 7. MAIN UI ---
 
 st.markdown("<h1>⚡ FUSION DOC MERGER</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>The professional way to brand your documents.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#94a3b8;'>System Unlocked. Ready for Operations.</p>", unsafe_allow_html=True)
 
-# Layout: 2 Columns for Uploads
+# Logout Button (Optional)
+if st.sidebar.button("🔒 Lock System"):
+    st.session_state.authenticated = False
+    st.session_state.show_puzzle = False
+    st.rerun()
+
 col1, col2 = st.columns(2)
 
 with col1:
-    st.markdown("""
-    <div class='glass-card'>
-        <div class='card-title'>1. Upload Letterhead</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='glass-card'><b>1. Upload Letterhead</b></div>", unsafe_allow_html=True)
     up_h = st.file_uploader("Header", type="pdf", label_visibility="collapsed", key="h")
 
 with col2:
-    st.markdown("""
-    <div class='glass-card'>
-        <div class='card-title'>2. Upload Content</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<div class='glass-card'><b>2. Upload Content</b></div>", unsafe_allow_html=True)
     up_d = st.file_uploader("Data", type="pdf", label_visibility="collapsed", key="d")
 
-st.write("") # Gap
+st.write("") 
+merge_mode = st.radio("Settings", ["Apply to First Page Only", "Apply to All Pages"], horizontal=True, label_visibility="collapsed")
 
-# Settings Section
-st.markdown("<div style='text-align: center; color: #94a3b8; font-size: 0.8rem; margin-bottom: 5px;'>CONFIGURATION</div>", unsafe_allow_html=True)
-merge_mode = st.radio(
-    "Settings",
-    ["Apply to First Page Only", "Apply to All Pages"],
-    horizontal=True,
-    label_visibility="collapsed"
-)
-
-st.write("") # Gap
-
-# Action Button
 if st.button("INITIALIZE MERGE 🚀"):
     if up_h and up_d:
         with st.status("Processing Data...", expanded=True) as status:
@@ -251,17 +240,12 @@ if st.button("INITIALIZE MERGE 🚀"):
                 st.error(f"Error: {err}")
             else:
                 status.update(label="Complete!", state="complete", expanded=False)
-                st.balloons()
-                
-                # Success Area
                 st.markdown("""
                 <div style='background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; padding: 15px; border-radius: 10px; text-align: center; margin-top: 20px;'>
                     <h3 style='color: #10b981; margin:0;'>✅ Success! Files Ready.</h3>
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Downloads
-                st.write("")
                 d1, d2 = st.columns(2)
                 with d1:
                     with open(pdf, "rb") as f:
@@ -270,7 +254,6 @@ if st.button("INITIALIZE MERGE 🚀"):
                     with open(docx, "rb") as f:
                         st.download_button("⬇ Download Word", f, "Merged.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
                 
-                # Cleanup
                 os.remove(pdf); os.remove(docx)
     else:
         st.toast("⚠️ Please upload both files first!", icon="⚠️")
