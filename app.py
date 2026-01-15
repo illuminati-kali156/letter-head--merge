@@ -21,65 +21,94 @@ if "puzzle_sequence" not in st.session_state:
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
 
-# --- 3. CYBER-NATURE THEME ---
+# --- 3. HIGH-CONTRAST "CYBER-NATURE" THEME ---
 st.markdown("""
     <style>
-    /* MAIN BACKGROUND */
+    /* GLOBAL DARK THEME - DEEP BLACK BACKGROUND */
     .stApp {
-        background-color: #050505;
-        background-image: radial-gradient(circle at 50% 50%, #0f2e18 0%, #000000 100%);
-        color: #e0e0e0;
+        background-color: #000000;
+        color: #00ff41; /* Bright Neon Green Text */
         font-family: 'Courier New', Courier, monospace;
     }
 
-    /* NEON CARDS */
+    /* NEON CARDS (High Visibility) */
     .neon-card {
-        background: rgba(10, 20, 10, 0.9);
-        border: 1px solid #00ff41;
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.15);
+        background: #0a0a0a; /* Almost Black */
+        border: 2px solid #00ff41; /* Bright Border */
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
         padding: 30px;
         border-radius: 15px;
         text-align: center;
         margin-bottom: 20px;
     }
 
-    /* TEXT STYLES */
-    h1 { color: #fff; text-shadow: 0 0 10px #00ff41; font-weight: 800; letter-spacing: 2px; }
-    p, label { color: #a3ffac !important; font-weight: 600; }
-    
-    /* INPUTS */
-    .stTextInput input {
-        background-color: #000 !important;
-        border: 1px solid #00ff41 !important;
-        color: #00ff41 !important;
+    /* TYPOGRAPHY - 100% VISIBLE */
+    h1 {
+        color: #ffffff !important; /* White Headers */
+        text-shadow: 0 0 10px #00ff41;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
         text-align: center;
-        font-weight: bold;
+    }
+    
+    /* Force all paragraph text to be bright green */
+    p, label, span, div {
+        color: #00ff41 !important; 
+        font-weight: 600;
+    }
+    
+    /* Special override for hints */
+    .caption {
+        color: #a3ffac !important; /* Lighter green for small text */
     }
 
-    /* BUTTONS - DEFAULT */
+    /* INPUT FIELDS */
+    .stTextInput input {
+        background-color: #000000 !important;
+        border: 2px solid #00ff41 !important;
+        color: #ffffff !important; /* White text input */
+        text-align: center;
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    /* BUTTONS */
     .stButton button {
-        background: transparent;
+        background: #000000;
         color: #00ff41;
-        border: 1px solid #00ff41;
+        border: 2px solid #00ff41;
         width: 100%;
         padding: 15px;
         font-weight: bold;
-        transition: all 0.2s;
+        font-size: 16px;
+        text-transform: uppercase;
+        transition: all 0.2s ease-in-out;
     }
     .stButton button:hover {
         background: #00ff41;
-        color: black;
-        box-shadow: 0 0 15px #00ff41;
+        color: #000000;
+        box-shadow: 0 0 20px #00ff41;
+        border-color: #ffffff;
+    }
+    
+    /* DISABLED BUTTONS (Selected State) */
+    .stButton button:disabled {
+        background-color: #003300;
+        color: #00ff41;
+        border-color: #005500;
+        opacity: 1; /* Keep it visible */
     }
 
     /* UPLOAD AREA */
     div[data-testid="stFileUploader"] {
-        border: 1px dashed #00ff41;
-        background: rgba(0, 255, 65, 0.05);
-        padding: 10px;
+        border: 2px dashed #00ff41;
+        background: #050505;
+        padding: 15px;
         border-radius: 10px;
     }
 
+    /* HIDE STREAMLIT UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
@@ -148,47 +177,43 @@ def process_merge(header_file, data_file, mode):
                 try: os.remove(p)
                 except: pass
 
-# --- 5. AUTH & PUZZLE (FIXED) ---
+# --- 5. AUTH & PUZZLE ---
 
 def verify_password_hash(input_pass):
-    # Hash for "bio-energy"
+    # Hash for "bio-energy" (Provided by you)
     CORRECT_HASH = "628e41e64c14ca3498d99dad723852dc446fd56dc555a3f5a91117da51d90469"
     return hashlib.sha256(input_pass.strip().encode()).hexdigest() == CORRECT_HASH
 
 def check_password_callback():
-    # REMOVED st.rerun() to fix the "No-op" error. 
-    # Streamlit automatically updates after this function finishes.
+    # NO st.rerun() here! It happens automatically.
     if verify_password_hash(st.session_state.password_input):
         st.session_state.auth_status = "puzzle"
         st.session_state.login_msg = ""
     else:
-        st.session_state.login_msg = "❌ ACCESS DENIED / चुकीचा पासवर्ड"
+        st.session_state.login_msg = "❌ ACCESS DENIED (चुकीचा पासवर्ड)"
 
 def puzzle_click(icon):
-    # Add to sequence
     st.session_state.puzzle_sequence.append(icon)
     
-    # Target: Feedstock -> Digestion -> Energy
+    # Sequence: Feedstock -> Digestion -> Energy
     target = ["🌽", "🫧", "⚡"]
-    
     current_idx = len(st.session_state.puzzle_sequence) - 1
     
-    # 1. Check Bounds
+    # 1. Bounds Check
     if current_idx >= len(target):
         st.session_state.puzzle_sequence = []
         st.toast("⚠️ System Reset", icon="🔄")
         return
 
-    # 2. Check Logic
+    # 2. Correctness Check
     if st.session_state.puzzle_sequence[current_idx] != target[current_idx]:
         st.session_state.puzzle_sequence = []
-        st.toast("⚠️ Sequence Error! Resetting...", icon="❌")
+        st.toast("⚠️ Wrong Sequence! (चुकीचा क्रम)", icon="❌")
         return
 
-    # 3. Success?
+    # 3. Completion Check
     if len(st.session_state.puzzle_sequence) == 3:
         st.session_state.auth_status = "unlocked"
-        # No st.rerun() needed here either, the state change triggers the UI update
 
 # --- 6. LOGIN UI ---
 
@@ -199,48 +224,48 @@ if st.session_state.auth_status != "unlocked":
     with col2:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.markdown("<h1>⚡ BIO-CORE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:0.8em;'>Super AAI Bio Energy Pvt Ltd</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:0.9em;'>Super AAI Bio Energy Pvt Ltd</p>", unsafe_allow_html=True)
         st.markdown("---")
 
         if st.session_state.auth_status == "locked":
-            # PHASE 1: PASSWORD
+            # PASSWORD SCREEN
             st.text_input("ENTER PASSKEY", type="password", key="password_input", on_change=check_password_callback)
             if st.session_state.login_msg:
                 st.error(st.session_state.login_msg)
 
         elif st.session_state.auth_status == "puzzle":
-            # PHASE 2: REACTOR SEQUENCE
-            st.markdown("### 🧬 INITIATE REACTOR")
-            st.caption("Sequence: Feedstock → Digestion → Energy")
-            st.caption("(कच्चा माल → प्रक्रिया → ऊर्जा)")
+            # PUZZLE SCREEN
+            st.markdown("### 🧬 REACTOR STARTUP")
+            st.markdown("<p class='caption'>Sequence: Feedstock → Digestion → Energy</p>", unsafe_allow_html=True)
+            st.markdown("<p class='caption'>(कच्चा माल → प्रक्रिया → ऊर्जा)</p>", unsafe_allow_html=True)
             
-            # Draw buttons. If selected, we show a CHECKMARK to keep it "Selected"
+            # Button Logic: If clicked, show "CHECKED" version and Disable it
             seq = st.session_state.puzzle_sequence
             
-            # Determine labels based on selection state
-            lbl_corn = "✅ 🌽" if "🌽" in seq else "🌽"
-            lbl_bub  = "✅ 🫧" if "🫧" in seq else "🫧"
-            lbl_bolt = "✅ ⚡" if "⚡" in seq else "⚡"
+            # Labels change based on selection
+            l_corn = "✅ 🌽" if "🌽" in seq else "🌽"
+            l_bub  = "✅ 🫧" if "🫧" in seq else "🫧"
+            l_bolt = "✅ ⚡" if "⚡" in seq else "⚡"
             
-            # Disable buttons if already clicked to prevent double clicks
-            dis_corn = "🌽" in seq
-            dis_bub  = "🫧" in seq
-            dis_bolt = "⚡" in seq
+            # Disable if already in sequence
+            d_corn = "🌽" in seq
+            d_bub  = "🫧" in seq
+            d_bolt = "⚡" in seq
 
             c1, c2, c3 = st.columns(3)
             with c1: 
-                st.button(lbl_corn, on_click=puzzle_click, args=("🌽",), disabled=dis_corn, use_container_width=True)
+                st.button(l_corn, on_click=puzzle_click, args=("🌽",), disabled=d_corn, use_container_width=True)
             with c2: 
-                st.button(lbl_bub, on_click=puzzle_click, args=("🫧",), disabled=dis_bub, use_container_width=True)
+                st.button(l_bub, on_click=puzzle_click, args=("🫧",), disabled=d_bub, use_container_width=True)
             with c3: 
-                st.button(lbl_bolt, on_click=puzzle_click, args=("⚡",), disabled=dis_bolt, use_container_width=True)
+                st.button(l_bolt, on_click=puzzle_click, args=("⚡",), disabled=d_bolt, use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # --- 7. MAIN DASHBOARD ---
 
-st.markdown("<h1 style='text-align:center;'>Super AAI BIO Energy PVT LTD</h1>", unsafe_allow_html=True)
+st.markdown("<h1>Super AAI BIO Energy</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>OFFICIAL DOCUMENT MERGER SYSTEM</p>", unsafe_allow_html=True)
 
 # Logout
@@ -254,11 +279,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 # Uploads
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown("<div class='neon-card'><h3>📄 LETTERHEAD</h3><p style='font-size:0.8em'>Upload Company Header</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='neon-card'><h3>📄 LETTERHEAD</h3><p>Upload Company Header</p></div>", unsafe_allow_html=True)
     up_h = st.file_uploader("Header", type="pdf", label_visibility="collapsed", key="h")
 
 with col2:
-    st.markdown("<div class='neon-card'><h3>📝 CONTENT</h3><p style='font-size:0.8em'>Upload Document Body</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='neon-card'><h3>📝 CONTENT</h3><p>Upload Document Body</p></div>", unsafe_allow_html=True)
     up_d = st.file_uploader("Data", type="pdf", label_visibility="collapsed", key="d")
 
 # Settings
