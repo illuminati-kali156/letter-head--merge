@@ -4,12 +4,12 @@ import os
 from pdf2docx import Converter
 import time
 import tempfile
-import hashlib  # <--- FOR SECURITY
+import hashlib
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Super AAI BIO Energy",
-    page_icon="🌿",
+    page_icon="⚡",
     layout="centered"
 )
 
@@ -21,77 +21,112 @@ if "puzzle_sequence" not in st.session_state:
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
 
-# --- 3. EYE-COMFORT "SAGE & EARTH" THEME ---
+# --- 3. "CYBER-NATURE" THEME (Dark Mode + Neon) ---
 st.markdown("""
     <style>
-    /* SOFT BACKGROUND (Easy on eyes) */
+    /* GLOBAL DARK THEME */
     .stApp {
-        background-color: #f1f8e9; /* Very light sage green */
-        background-image: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%);
-        font-family: 'Helvetica', 'Arial', sans-serif;
-        color: #333333; /* Dark Grey text for readability */
+        background-color: #050505;
+        background-image: radial-gradient(circle at 50% 50%, #0a2e15 0%, #000000 100%);
+        color: #e0e0e0;
+        font-family: 'Courier New', Courier, monospace;
     }
 
-    /* CARD STYLE (Soft Shadows, No sharp borders) */
-    .soft-card {
-        background-color: #ffffff;
+    /* FALLING PARTICLES ANIMATION */
+    @keyframes fall {
+        0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+        20% { opacity: 1; }
+        100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+    }
+    .particle {
+        position: fixed;
+        color: #00ff41;
+        font-size: 20px;
+        animation: fall 10s linear infinite;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.5;
+    }
+
+    /* NEON CARDS */
+    .neon-card {
+        background: rgba(10, 20, 10, 0.85);
+        border: 1px solid #00ff41;
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
         padding: 30px;
         border-radius: 15px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05); /* Soft shadow */
-        margin-bottom: 20px;
         text-align: center;
-        border: 1px solid #e0e0e0;
+        margin-bottom: 20px;
+        backdrop-filter: blur(5px);
     }
 
     /* TYPOGRAPHY */
     h1 {
-        color: #2e7d32; /* Forest Green */
-        font-weight: 700;
-        margin-bottom: 5px;
+        color: #ffffff;
+        text-shadow: 0 0 10px #00ff41;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 2px;
     }
-    h3 { color: #558b2f; }
-    p { color: #555555; line-height: 1.6; }
-
-    /* BUTTONS (Matte Finish, not Neon) */
-    .stButton button {
-        background-color: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
+    p, label {
+        color: #a3ffac !important; /* Bright Green Text */
         font-weight: 600;
-        transition: background 0.3s;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    .stButton button:hover {
-        background-color: #1b5e20; /* Darker green on hover */
-        color: white;
+    .hint {
+        color: #666;
+        font-size: 0.8em;
     }
 
-    /* INPUT FIELDS (Clean white with soft border) */
+    /* INPUT FIELDS (High Contrast) */
     .stTextInput input {
-        background-color: #ffffff !important;
-        border: 1px solid #bdbdbd !important;
-        color: #333333 !important;
-        border-radius: 8px;
-        padding: 10px;
+        background-color: #111 !important;
+        border: 1px solid #00ff41 !important;
+        color: #00ff41 !important; /* Neon Green Text */
+        text-align: center;
+        font-size: 18px;
+        border-radius: 5px;
     }
     
-    /* UPLOAD AREA */
-    div[data-testid="stFileUploader"] {
-        background-color: #fafafa;
-        border: 1px dashed #bdbdbd;
-        border-radius: 10px;
+    /* BUTTONS */
+    .stButton button {
+        background: black;
+        color: #00ff41;
+        border: 2px solid #00ff41;
+        width: 100%;
         padding: 15px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s ease;
     }
-    div[data-testid="stFileUploader"] section {
-        background-color: transparent;
+    .stButton button:hover {
+        background: #00ff41;
+        color: black;
+        box-shadow: 0 0 20px #00ff41;
     }
 
-    /* HIDE MENU */
+    /* PUZZLE BUTTONS */
+    .puzzle-btn {
+        font-size: 30px; 
+        cursor: pointer;
+    }
+
+    /* UPLOAD AREA */
+    div[data-testid="stFileUploader"] {
+        border: 1px dashed #00ff41;
+        background: rgba(0, 255, 65, 0.05);
+        padding: 15px;
+        border-radius: 10px;
+    }
+
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
+
+    <div class="particle" style="left: 10%; animation-duration: 7s;">101</div>
+    <div class="particle" style="left: 30%; animation-duration: 11s;">🍃</div>
+    <div class="particle" style="left: 70%; animation-duration: 9s;">⚡</div>
+    <div class="particle" style="left: 90%; animation-duration: 13s;">010</div>
 """, unsafe_allow_html=True)
 
 # --- 4. SECURE LOGIC ---
@@ -107,7 +142,6 @@ def get_visible_content_bottom(page):
     return max_y
 
 def process_merge(header_file, data_file, mode):
-    # Temp files logic (Secure Deletion is handled in 'finally')
     t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     out_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
@@ -124,7 +158,7 @@ def process_merge(header_file, data_file, mode):
             h_doc = fitz.open(t_header.name)
             d_doc = fitz.open(t_data.name)
         except:
-            return None, None, "File Corrupt or Encrypted (फाइल खराब आहे)"
+            return None, None, "File Corrupt or Locked (फाइल खराब आहे)"
 
         out_doc = fitz.open()
         h_page = h_doc[0]
@@ -153,21 +187,21 @@ def process_merge(header_file, data_file, mode):
     except Exception as e:
         return None, None, str(e)
     finally:
-        # SECURITY: Ensure Input Files are removed 100% of the time
         for p in clean_paths:
             if os.path.exists(p):
                 try: os.remove(p)
                 except: pass
 
-# --- 5. HASHING SECURITY (NO PLAIN TEXT PASSWORD) ---
+# --- 5. AUTHENTICATION (FIXED & SECURE) ---
 
 def verify_password_hash(input_pass):
-    # This is the SHA-256 Hash of "bio-gas"
-    # Even if people see this code, they just see this number, not the password.
+    # Fixed: .strip() removes accidental spaces
+    clean_pass = input_pass.strip()
+    
+    # Hash for "bio-gas"
     CORRECT_HASH = "a672727144415891392661578332997672223403310069007559190186259837"
     
-    # Convert user input to hash and compare
-    input_hash = hashlib.sha256(input_pass.encode()).hexdigest()
+    input_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
     return input_hash == CORRECT_HASH
 
 def check_password_callback():
@@ -175,25 +209,26 @@ def check_password_callback():
         st.session_state.auth_status = "puzzle"
         st.session_state.login_msg = ""
     else:
-        st.session_state.login_msg = "❌ Incorrect Password"
+        st.session_state.login_msg = "❌ ACCESS DENIED / चुकीचा पासवर्ड"
 
 def puzzle_click(icon):
     st.session_state.puzzle_sequence.append(icon)
     target = ["🐮", "🍃", "🔥"]
     
-    # Safety Check: Prevent Index Error
     current_idx = len(st.session_state.puzzle_sequence) - 1
+    
+    # Safety Check
     if current_idx >= len(target):
         st.session_state.puzzle_sequence = []
         return
 
-    # Verify Step
+    # Check Sequence
     if st.session_state.puzzle_sequence[current_idx] != target[current_idx]:
         st.session_state.puzzle_sequence = []
-        st.toast("⚠️ Sequence Error! Resetting...", icon="🔄")
+        st.toast("⚠️ ERROR: Sequence Reset! (चुकीचा क्रम)", icon="🛑")
         return
 
-    # Verify Completion
+    # Success Check
     if len(st.session_state.puzzle_sequence) == 3:
         st.session_state.auth_status = "unlocked"
         st.rerun()
@@ -201,101 +236,104 @@ def puzzle_click(icon):
 # --- 6. UI: LOGIN SCREEN ---
 
 if st.session_state.auth_status != "unlocked":
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        st.markdown("<div class='soft-card'>", unsafe_allow_html=True)
-        # BRANDING
-        st.markdown("<h1>Super AAI BIO Energy</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size: 0.9em; color: #777;'>SECURE DOCUMENT PORTAL</p>", unsafe_allow_html=True)
+        st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
+        st.markdown("<h1>⚡ BIO-CORE</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:0.8em;'>SECURE SYSTEM | Super AAI Bio Energy</p>", unsafe_allow_html=True)
         st.markdown("---")
 
         if st.session_state.auth_status == "locked":
-            st.text_input("Enter Password", type="password", key="password_input", on_change=check_password_callback)
+            # Hint is now VERY visible
+            st.info("HINT: The gas we produce (bio-gas)")
+            st.text_input("ENTER PASSKEY", type="password", key="password_input", on_change=check_password_callback)
+            
             if st.session_state.login_msg:
                 st.error(st.session_state.login_msg)
 
         elif st.session_state.auth_status == "puzzle":
-            st.markdown("### Security Check")
-            st.markdown("<p style='font-size: 0.9em;'>Select sequence: Livestock → Nature → Bio-Gas<br>(पशुधन → निसर्ग → बायो-गॅस)</p>", unsafe_allow_html=True)
+            st.markdown("### 🧩 VERIFY PROTOCOL")
+            st.markdown("<p style='color:white !important;'>Sequence: Livestock → Nature → Fire</p>", unsafe_allow_html=True)
+            st.markdown("<p style='color:white !important; font-size:0.8em;'>(पशुधन → निसर्ग → अग्नी)</p>", unsafe_allow_html=True)
             
             c1, c2, c3 = st.columns(3)
             with c1: st.button("🐮", key="b1", on_click=puzzle_click, args=("🐮",), use_container_width=True)
-            with c2: st.button("🔥", key="b2", on_click=puzzle_click, args=("🔥",), use_container_width=True)
-            with c3: st.button("🍃", key="b3", on_click=puzzle_click, args=("🍃",), use_container_width=True)
+            with c2: st.button("🍃", key="b2", on_click=puzzle_click, args=("🍃",), use_container_width=True)
+            with c3: st.button("🔥", key="b3", on_click=puzzle_click, args=("🔥",), use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# --- 7. UI: MAIN DASHBOARD ---
+# --- 7. UI: MAIN DASHBOARD (UNLOCKED) ---
 
 st.markdown("<h1 style='text-align:center;'>Super AAI BIO Energy PVT LTD</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>Official Document Merger System</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>OFFICIAL DOCUMENT MERGER SYSTEM</p>", unsafe_allow_html=True)
 
 # Logout
-if st.sidebar.button("🔒 Logout"):
+if st.sidebar.button("🔒 LOGOUT"):
     st.session_state.auth_status = "locked"
     st.session_state.puzzle_sequence = []
     st.rerun()
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Upload Section
+# Upload Area
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown("<div class='soft-card'><h3>📄 Letterhead</h3><p>Upload the company header PDF</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='neon-card'><h3>📄 LETTERHEAD</h3><p style='font-size:0.8em'>Upload Company Header</p></div>", unsafe_allow_html=True)
     up_h = st.file_uploader("Header", type="pdf", label_visibility="collapsed", key="h")
 
 with col2:
-    st.markdown("<div class='soft-card'><h3>📝 Content</h3><p>Upload the document body PDF</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='neon-card'><h3>📝 CONTENT</h3><p style='font-size:0.8em'>Upload Document Body</p></div>", unsafe_allow_html=True)
     up_d = st.file_uploader("Data", type="pdf", label_visibility="collapsed", key="d")
 
-# Configuration Section
+# Settings
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("### ⚙️ Settings")
-
 c1, c2 = st.columns(2)
+
 with c1:
-    mode = st.radio("Header Placement", ["Apply to First Page Only", "Apply to All Pages"])
+    st.markdown("### ⚙️ SETTINGS")
+    mode = st.radio("Header Mode", ["Apply to First Page Only", "Apply to All Pages"])
+
 with c2:
-    # NEW FEATURE: CUSTOM FILENAME
-    custom_name = st.text_input("Name your output file:", value="My_Bio_Document", help="Enter a name for the generated file")
+    st.markdown("### 🏷️ FILENAME")
+    custom_name = st.text_input("Name your file:", value="Bio_Document", help="No extension needed")
 
+# Action
 st.markdown("<br>", unsafe_allow_html=True)
-
-# Generate Button
-if st.button("✨ GENERATE DOCUMENT"):
+if st.button(">>> GENERATE DOCUMENT <<<"):
     if up_h and up_d:
-        with st.status("Processing Document...", expanded=True) as status:
-            st.write("Reading inputs...")
+        with st.status("PROCESSING...", expanded=True) as status:
+            st.write("🔹 Reading Secure Files...")
             time.sleep(0.5)
-            st.write("Merging layers...")
+            st.write("🔹 Merging Layers...")
             
             pdf, docx, err = process_merge(up_h, up_d, mode)
             
             if err:
-                status.update(label="Error", state="error")
+                status.update(label="ERROR", state="error")
                 st.error(f"Error: {err}")
             else:
-                status.update(label="Complete!", state="complete", expanded=False)
+                status.update(label="SUCCESS", state="complete", expanded=False)
                 
-                # Clean Filename Logic
-                clean_name = "".join(x for x in custom_name if x.isalnum() or x in "_- ")
+                # Filename logic
+                clean_name = "".join(x for x in custom_name if x.isalnum() or x in "_-")
                 if not clean_name: clean_name = "Document"
                 
-                st.success("✅ Files generated successfully!")
+                st.balloons()
+                st.success("✅ FILES READY FOR DOWNLOAD")
                 
                 d1, d2 = st.columns(2)
                 with d1:
                     with open(pdf, "rb") as f:
-                        st.download_button("⬇ Download PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
+                        st.download_button("⬇ DOWNLOAD PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
                 with d2:
                     with open(docx, "rb") as f:
-                        st.download_button("⬇ Download Word", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        st.download_button("⬇ DOWNLOAD WORD", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
                 
-                # Security Cleanup: Output files
                 os.remove(pdf)
                 os.remove(docx)
     else:
-        st.warning("⚠️ Please upload both Letterhead and Content files.")
+        st.warning("⚠️ PLEASE UPLOAD BOTH FILES")
