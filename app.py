@@ -21,115 +21,71 @@ if "puzzle_sequence" not in st.session_state:
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
 
-# --- 3. "CYBER-NATURE" THEME (Dark Mode + Neon) ---
+# --- 3. CYBER-NATURE THEME ---
 st.markdown("""
     <style>
-    /* GLOBAL DARK THEME */
+    /* MAIN BACKGROUND */
     .stApp {
         background-color: #050505;
-        background-image: radial-gradient(circle at 50% 50%, #0a2e15 0%, #000000 100%);
+        background-image: radial-gradient(circle at 50% 50%, #0f2e18 0%, #000000 100%);
         color: #e0e0e0;
         font-family: 'Courier New', Courier, monospace;
     }
 
-    /* FALLING PARTICLES ANIMATION */
-    @keyframes fall {
-        0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
-        20% { opacity: 1; }
-        100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
-    }
-    .particle {
-        position: fixed;
-        color: #00ff41;
-        font-size: 20px;
-        animation: fall 10s linear infinite;
-        z-index: 0;
-        pointer-events: none;
-        opacity: 0.5;
-    }
-
     /* NEON CARDS */
     .neon-card {
-        background: rgba(10, 20, 10, 0.85);
+        background: rgba(10, 20, 10, 0.9);
         border: 1px solid #00ff41;
-        box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        box-shadow: 0 0 15px rgba(0, 255, 65, 0.15);
         padding: 30px;
         border-radius: 15px;
         text-align: center;
         margin-bottom: 20px;
-        backdrop-filter: blur(5px);
     }
 
-    /* TYPOGRAPHY */
-    h1 {
-        color: #ffffff;
-        text-shadow: 0 0 10px #00ff41;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-    p, label {
-        color: #a3ffac !important; /* Bright Green Text */
-        font-weight: 600;
-    }
-    .hint {
-        color: #666;
-        font-size: 0.8em;
-    }
-
-    /* INPUT FIELDS (High Contrast) */
-    .stTextInput input {
-        background-color: #111 !important;
-        border: 1px solid #00ff41 !important;
-        color: #00ff41 !important; /* Neon Green Text */
-        text-align: center;
-        font-size: 18px;
-        border-radius: 5px;
-    }
+    /* TEXT STYLES */
+    h1 { color: #fff; text-shadow: 0 0 10px #00ff41; font-weight: 800; letter-spacing: 2px; }
+    p, label { color: #a3ffac !important; font-weight: 600; }
     
-    /* BUTTONS */
+    /* INPUTS */
+    .stTextInput input {
+        background-color: #000 !important;
+        border: 1px solid #00ff41 !important;
+        color: #00ff41 !important;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    /* BUTTONS - DEFAULT */
     .stButton button {
-        background: black;
+        background: transparent;
         color: #00ff41;
-        border: 2px solid #00ff41;
+        border: 1px solid #00ff41;
         width: 100%;
         padding: 15px;
         font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: all 0.3s ease;
+        transition: all 0.2s;
     }
     .stButton button:hover {
         background: #00ff41;
         color: black;
-        box-shadow: 0 0 20px #00ff41;
-    }
-
-    /* PUZZLE BUTTONS */
-    .puzzle-btn {
-        font-size: 30px; 
-        cursor: pointer;
+        box-shadow: 0 0 15px #00ff41;
     }
 
     /* UPLOAD AREA */
     div[data-testid="stFileUploader"] {
         border: 1px dashed #00ff41;
         background: rgba(0, 255, 65, 0.05);
-        padding: 15px;
+        padding: 10px;
         border-radius: 10px;
     }
 
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
-
-    <div class="particle" style="left: 10%; animation-duration: 7s;">101</div>
-    <div class="particle" style="left: 30%; animation-duration: 11s;">🍃</div>
-    <div class="particle" style="left: 70%; animation-duration: 9s;">⚡</div>
-    <div class="particle" style="left: 90%; animation-duration: 13s;">010</div>
 """, unsafe_allow_html=True)
 
-# --- 4. SECURE LOGIC ---
+# --- 4. BACKEND LOGIC ---
 
 def get_visible_content_bottom(page):
     max_y = 0
@@ -192,19 +148,16 @@ def process_merge(header_file, data_file, mode):
                 try: os.remove(p)
                 except: pass
 
-# --- 5. AUTHENTICATION (FIXED & SECURE) ---
+# --- 5. AUTH & PUZZLE (FIXED) ---
 
 def verify_password_hash(input_pass):
-    # Fixed: .strip() removes accidental spaces
-    clean_pass = input_pass.strip()
-    
-    # Hash for "bio-gas"
+    # Hash for "bio-energy"
     CORRECT_HASH = "628e41e64c14ca3498d99dad723852dc446fd56dc555a3f5a91117da51d90469"
-    
-    input_hash = hashlib.sha256(clean_pass.encode()).hexdigest()
-    return input_hash == CORRECT_HASH
+    return hashlib.sha256(input_pass.strip().encode()).hexdigest() == CORRECT_HASH
 
 def check_password_callback():
+    # REMOVED st.rerun() to fix the "No-op" error. 
+    # Streamlit automatically updates after this function finishes.
     if verify_password_hash(st.session_state.password_input):
         st.session_state.auth_status = "puzzle"
         st.session_state.login_msg = ""
@@ -212,28 +165,32 @@ def check_password_callback():
         st.session_state.login_msg = "❌ ACCESS DENIED / चुकीचा पासवर्ड"
 
 def puzzle_click(icon):
+    # Add to sequence
     st.session_state.puzzle_sequence.append(icon)
-    target = ["🐮", "🍃", "🔥"]
+    
+    # Target: Feedstock -> Digestion -> Energy
+    target = ["🌽", "🫧", "⚡"]
     
     current_idx = len(st.session_state.puzzle_sequence) - 1
     
-    # Safety Check
+    # 1. Check Bounds
     if current_idx >= len(target):
         st.session_state.puzzle_sequence = []
+        st.toast("⚠️ System Reset", icon="🔄")
         return
 
-    # Check Sequence
+    # 2. Check Logic
     if st.session_state.puzzle_sequence[current_idx] != target[current_idx]:
         st.session_state.puzzle_sequence = []
-        st.toast("⚠️ ERROR: Sequence Reset! (चुकीचा क्रम)", icon="🛑")
+        st.toast("⚠️ Sequence Error! Resetting...", icon="❌")
         return
 
-    # Success Check
+    # 3. Success?
     if len(st.session_state.puzzle_sequence) == 3:
         st.session_state.auth_status = "unlocked"
-        st.rerun()
+        # No st.rerun() needed here either, the state change triggers the UI update
 
-# --- 6. UI: LOGIN SCREEN ---
+# --- 6. LOGIN UI ---
 
 if st.session_state.auth_status != "unlocked":
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -242,31 +199,46 @@ if st.session_state.auth_status != "unlocked":
     with col2:
         st.markdown("<div class='neon-card'>", unsafe_allow_html=True)
         st.markdown("<h1>⚡ BIO-CORE</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='font-size:0.8em;'>SECURE SYSTEM | Super AAI Bio Energy</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:0.8em;'>Super AAI Bio Energy Pvt Ltd</p>", unsafe_allow_html=True)
         st.markdown("---")
 
         if st.session_state.auth_status == "locked":
-            # Hint is now VERY visible
-            st.info("HINT: The gas we produce (bio-gas)")
+            # PHASE 1: PASSWORD
             st.text_input("ENTER PASSKEY", type="password", key="password_input", on_change=check_password_callback)
-            
             if st.session_state.login_msg:
                 st.error(st.session_state.login_msg)
 
         elif st.session_state.auth_status == "puzzle":
-            st.markdown("### 🧩 VERIFY PROTOCOL")
-            st.markdown("<p style='color:white !important;'>Sequence: Livestock → Nature → Fire</p>", unsafe_allow_html=True)
-            st.markdown("<p style='color:white !important; font-size:0.8em;'>(पशुधन → निसर्ग → अग्नी)</p>", unsafe_allow_html=True)
+            # PHASE 2: REACTOR SEQUENCE
+            st.markdown("### 🧬 INITIATE REACTOR")
+            st.caption("Sequence: Feedstock → Digestion → Energy")
+            st.caption("(कच्चा माल → प्रक्रिया → ऊर्जा)")
             
+            # Draw buttons. If selected, we show a CHECKMARK to keep it "Selected"
+            seq = st.session_state.puzzle_sequence
+            
+            # Determine labels based on selection state
+            lbl_corn = "✅ 🌽" if "🌽" in seq else "🌽"
+            lbl_bub  = "✅ 🫧" if "🫧" in seq else "🫧"
+            lbl_bolt = "✅ ⚡" if "⚡" in seq else "⚡"
+            
+            # Disable buttons if already clicked to prevent double clicks
+            dis_corn = "🌽" in seq
+            dis_bub  = "🫧" in seq
+            dis_bolt = "⚡" in seq
+
             c1, c2, c3 = st.columns(3)
-            with c1: st.button("🐮", key="b1", on_click=puzzle_click, args=("🐮",), use_container_width=True)
-            with c2: st.button("🍃", key="b2", on_click=puzzle_click, args=("🍃",), use_container_width=True)
-            with c3: st.button("🔥", key="b3", on_click=puzzle_click, args=("🔥",), use_container_width=True)
+            with c1: 
+                st.button(lbl_corn, on_click=puzzle_click, args=("🌽",), disabled=dis_corn, use_container_width=True)
+            with c2: 
+                st.button(lbl_bub, on_click=puzzle_click, args=("🫧",), disabled=dis_bub, use_container_width=True)
+            with c3: 
+                st.button(lbl_bolt, on_click=puzzle_click, args=("⚡",), disabled=dis_bolt, use_container_width=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# --- 7. UI: MAIN DASHBOARD (UNLOCKED) ---
+# --- 7. MAIN DASHBOARD ---
 
 st.markdown("<h1 style='text-align:center;'>Super AAI BIO Energy PVT LTD</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>OFFICIAL DOCUMENT MERGER SYSTEM</p>", unsafe_allow_html=True)
@@ -279,7 +251,7 @@ if st.sidebar.button("🔒 LOGOUT"):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Upload Area
+# Uploads
 col1, col2 = st.columns(2)
 with col1:
     st.markdown("<div class='neon-card'><h3>📄 LETTERHEAD</h3><p style='font-size:0.8em'>Upload Company Header</p></div>", unsafe_allow_html=True)
@@ -299,7 +271,7 @@ with c1:
 
 with c2:
     st.markdown("### 🏷️ FILENAME")
-    custom_name = st.text_input("Name your file:", value="Bio_Document", help="No extension needed")
+    custom_name = st.text_input("Output Filename:", value="Bio_Document")
 
 # Action
 st.markdown("<br>", unsafe_allow_html=True)
@@ -323,15 +295,15 @@ if st.button(">>> GENERATE DOCUMENT <<<"):
                 if not clean_name: clean_name = "Document"
                 
                 st.balloons()
-                st.success("✅ FILES READY FOR DOWNLOAD")
+                st.success("✅ FILES READY")
                 
                 d1, d2 = st.columns(2)
                 with d1:
                     with open(pdf, "rb") as f:
-                        st.download_button("⬇ DOWNLOAD PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
+                        st.download_button("⬇ PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
                 with d2:
                     with open(docx, "rb") as f:
-                        st.download_button("⬇ DOWNLOAD WORD", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                        st.download_button("⬇ WORD", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
                 
                 os.remove(pdf)
                 os.remove(docx)
