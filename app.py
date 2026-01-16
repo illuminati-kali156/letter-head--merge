@@ -133,7 +133,7 @@ st.markdown("""
 
     /* --- UPLOAD BOX VISIBILITY FIX --- */
     div[data-testid="stFileUploader"] {
-        background-color: rgba(255, 255, 255, 0.2) !important;
+        background-color: rgba(0, 0, 0, 0.4) !important;
         border: 2px dashed #4caf50;
         border-radius: 15px;
         padding: 15px;
