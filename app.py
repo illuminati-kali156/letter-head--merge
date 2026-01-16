@@ -5,10 +5,6 @@ from pdf2docx import Converter
 import time
 import tempfile
 import hashlib
-from docx2pdf import convert  # Note: docx2pdf requires MS Word, for linux/cloud we use a trick or fallback
-# Since we are likely on cloud/linux without Word, we will use 'python-docx' to read text or just warn.
-# actually, for robustness on a server without Word installed, it's best to ask for PDF.
-# HOWEVER, I will enable Image support which works 100%.
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
@@ -27,7 +23,7 @@ if "login_msg" not in st.session_state:
 if "preview_img" not in st.session_state:
     st.session_state.preview_img = None
 
-# --- 3. FARM & NATURE THEME (VISIBILITY FIXED) ---
+# --- 3. FARM & NATURE THEME ---
 st.markdown("""
     <style>
     /* GLOBAL FONTS & COLORS */
@@ -106,45 +102,35 @@ st.markdown("""
     }
 
     /* --- UPLOAD BOX VISIBILITY FIX --- */
-    
-    /* 1. The Container */
     div[data-testid="stFileUploader"] {
         background-color: #ffffff;
         border: 2px dashed #4caf50;
         border-radius: 15px;
         padding: 15px;
     }
-
-    /* 2. The Dropzone Text (Instructions) */
     div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {
-        background-color: #f1f8e9; /* Light Green Background */
+        background-color: #f1f8e9;
     }
     div[data-testid="stFileUploader"] section div {
-        color: #1b5e20 !important; /* Dark Green Text */
+        color: #1b5e20 !important;
         font-weight: bold;
     }
     div[data-testid="stFileUploader"] section small {
-        color: #388e3c !important; /* Lighter Green for "Limit 200MB" */
+        color: #388e3c !important;
     }
     div[data-testid="stFileUploader"] section button {
-        background-color: #4caf50 !important; /* Green Button */
+        background-color: #4caf50 !important;
         color: white !important;
         border: none;
     }
-
-    /* 3. The Uploaded File Item (The list showing filename) */
     div[data-testid="stFileUploader"] ul {
         background-color: white !important;
     }
-    
-    /* Force Filename to be BLACK */
     div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
         color: #000000 !important; 
         font-weight: 900 !important;
         font-size: 16px !important;
     }
-    
-    /* Force size info to be visible */
     div[data-testid="stFileUploader"] div[data-testid="stFileUploaderFile"] small {
         color: #333333 !important;
     }
@@ -181,9 +167,8 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
         t_data.write(data_file.getbuffer())
         t_header.close(); t_data.close()
 
-        # Handle Word Files (Warning only, as conversion needs server tools)
         if t_data.name.endswith(".docx"):
-            return None # Cannot preview word easily without heavy libraries
+            return None 
 
         try:
             h_doc = fitz.open(t_header.name)
@@ -206,8 +191,6 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
         
         p = out_doc.new_page(width=w, height=h)
         p.show_pdf_page(fitz.Rect(0, 0, w, scaled_h), h_doc, 0)
-        
-        # If data is image/pdf, overlay it
         p.show_pdf_page(fitz.Rect(0, start_y, w, h), d_doc, 0)
         
         pix = p.get_pixmap(dpi=100) 
@@ -225,7 +208,6 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
                 except: pass
 
 def process_merge(header_file, data_file, mode, y_offset, header_scale, use_standard):
-    # EXTENSION DETECTION
     ext_h = os.path.splitext(header_file.name)[1].lower()
     ext_d = os.path.splitext(data_file.name)[1].lower()
 
@@ -240,15 +222,12 @@ def process_merge(header_file, data_file, mode, y_offset, header_scale, use_stan
         t_data.write(data_file.getbuffer())
         t_header.close(); t_data.close()
 
-        # --- WORD FILE HANDLING ---
-        # If user uploads .docx, we tell them it's best to use PDF, 
-        # but since 'fitz' can't read .docx, we check file type.
         if ext_d == ".docx":
-            return None, None, "Please save your Word file as PDF first. (Word file support requires dedicated server)."
+            return None, None, "Please save your Word file as PDF first. (Server limitation)"
 
         try:
-            h_doc = fitz.open(t_header.name) # Works for PDF & Images
-            d_doc = fitz.open(t_data.name)   # Works for PDF & Images
+            h_doc = fitz.open(t_header.name)
+            d_doc = fitz.open(t_data.name)
         except:
             return None, None, "File type not supported. Use PDF or Image."
 
@@ -369,7 +348,7 @@ with col1:
     st.markdown("<div class='farm-card'><h3>📄 Letterhead</h3><p>Upload Header (PDF/IMG)</p></div>", unsafe_allow_html=True)
     up_h = st.file_uploader("Header", type=["pdf","png","jpg","jpeg"], label_visibility="collapsed", key="h")
 with col2:
-    st.markdown("<div class='farm-card'><h3>📝 Content</h3><p>Upload Body (PDF/IMG/DOCX)</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='farm-card'><h3>📝 Content</h3><p>Upload Body (PDF/IMG)</p></div>", unsafe_allow_html=True)
     up_d = st.file_uploader("Data", type=["pdf","png","jpg","jpeg","docx"], label_visibility="collapsed", key="d")
 
 # --- SETTINGS SECTION ---
@@ -382,4 +361,59 @@ tab1, tab2 = st.tabs(["📏 Layout", "📐 Header Sizer"])
 with tab1:
     mode = st.radio("Header Mode", ["Apply to First Page Only", "Apply to All Pages"], horizontal=True)
     st.markdown("---")
-    use_standard = st.checkbox("✅ Use Industry Standard Gap (
+    # --- BUG FIX: THIS LINE IS NOW ONE SINGLE LINE ---
+    use_standard = st.checkbox("✅ Use Industry Standard Gap (1.8 inches)", value=False)
+    y_offset = st.slider("Fine-Tune Position (+/-)", min_value=-100, max_value=200, value=0)
+
+with tab2:
+    st.info("Shrink the header if it looks too big.")
+    header_scale = st.slider("Header Size %", min_value=50, max_value=100, value=100)
+
+st.markdown("---")
+custom_name = st.text_input("Output Filename:", value="Bio_Farm_Doc")
+
+if st.button("👁️ Show Preview (प्रीव्ह्यू पहा)"):
+    if up_h and up_d:
+        with st.spinner("Generating Preview..."):
+            img_bytes = generate_preview(up_h, up_d, y_offset, header_scale, use_standard)
+            if img_bytes:
+                st.image(img_bytes, caption="Page 1 Preview", use_container_width=True)
+            else:
+                st.error("Preview not available for Word files or invalid inputs.")
+    else:
+        st.warning("Upload files first!")
+
+st.markdown("</div>", unsafe_allow_html=True)
+
+# GENERATE
+st.markdown("<br>", unsafe_allow_html=True)
+if st.button("🚜 GENERATE DOCUMENT (फाइल बनवा)"):
+    if up_h and up_d:
+        with st.status("Processing... (प्रक्रिया सुरू आहे)", expanded=True) as status:
+            st.write("🌿 Reading Files...")
+            time.sleep(0.5)
+            st.write("⚙️ Merging...")
+            
+            pdf, docx, err = process_merge(up_h, up_d, mode, y_offset, header_scale, use_standard)
+            
+            if err:
+                status.update(label="Error", state="error")
+                st.error(f"Error: {err}")
+            else:
+                status.update(label="Success!", state="complete", expanded=False)
+                clean_name = "".join(x for x in custom_name if x.isalnum() or x in "_-")
+                if not clean_name: clean_name = "Document"
+                
+                st.balloons()
+                st.success("✅ Files Ready!")
+                
+                d1, d2 = st.columns(2)
+                with d1:
+                    with open(pdf, "rb") as f:
+                        st.download_button("⬇ Download PDF", f, file_name=f"{clean_name}.pdf", mime="application/pdf", use_container_width=True)
+                with d2:
+                    with open(docx, "rb") as f:
+                        st.download_button("⬇ Download Word", f, file_name=f"{clean_name}.docx", mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document", use_container_width=True)
+                os.remove(pdf); os.remove(docx)
+    else:
+        st.warning("⚠️ Please upload both files!")
