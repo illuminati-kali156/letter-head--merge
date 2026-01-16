@@ -20,10 +20,8 @@ if "puzzle_sequence" not in st.session_state:
     st.session_state.puzzle_sequence = []
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
-if "preview_img" not in st.session_state:
-    st.session_state.preview_img = None
 
-# --- 3. FARM & NATURE THEME ---
+# --- 3. FARM & NATURE THEME (FIXED VISIBILITY) ---
 st.markdown("""
     <style>
     /* BACKGROUND */
@@ -52,7 +50,6 @@ st.markdown("""
         z-index: 1;
         pointer-events: none;
     }
-
     @keyframes cloud-move {
         0% { transform: translateX(-10vw); opacity: 0; }
         10% { opacity: 0.8; }
@@ -69,23 +66,9 @@ st.markdown("""
         top: 10%;
     }
 
-    @keyframes rain-drop {
-        0% { transform: translateY(-10vh); opacity: 0; }
-        50% { opacity: 0.5; }
-        100% { transform: translateY(110vh); opacity: 0; }
-    }
-    .rain {
-        position: fixed;
-        width: 2px;
-        height: 15px;
-        background: rgba(0, 0, 255, 0.2);
-        animation: rain-drop 2s linear infinite;
-        z-index: 0;
-    }
-
     /* CARDS */
     .farm-card {
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(255, 255, 255, 0.85); /* Increased Opacity for readability */
         backdrop-filter: blur(8px);
         border: 2px solid #a5d6a7;
         border-radius: 20px;
@@ -131,12 +114,23 @@ st.markdown("""
         opacity: 1;
     }
 
-    /* UPLOAD BOX */
+    /* --- UPLOAD BOX FIX (Crucial) --- */
     div[data-testid="stFileUploader"] {
-        background-color: rgba(255, 255, 255, 0.6);
+        background-color: #ffffff; /* Solid White Background */
         border: 2px dashed #4caf50;
         border-radius: 15px;
-        padding: 10px;
+        padding: 15px;
+    }
+    /* Force Filename Text to be Dark */
+    div[data-testid="stFileUploader"] section {
+        color: #000000 !important;
+    }
+    div[data-testid="stFileUploader"] span {
+        color: #1b5e20 !important; /* Green text for filename */
+        font-weight: bold !important;
+    }
+    div[data-testid="stFileUploader"] small {
+        color: #555555 !important; /* Grey text for file size */
     }
 
     #MainMenu {visibility: hidden;}
@@ -148,8 +142,6 @@ st.markdown("""
     <div class="leaf" style="left: 10%; animation-duration: 8s;">🍃</div>
     <div class="leaf" style="left: 30%; animation-duration: 12s; font-size: 24px;">🍂</div>
     <div class="leaf" style="left: 70%; animation-duration: 10s;">🍃</div>
-    <div class="rain" style="left: 20%; animation-duration: 1.5s;"></div>
-    <div class="rain" style="left: 50%; animation-duration: 2s;"></div>
 """, unsafe_allow_html=True)
 
 # --- 4. BACKEND LOGIC ---
@@ -168,7 +160,6 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
     """Generates an image of the first page for preview."""
     t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    
     clean_paths = [t_header.name, t_data.name]
     
     try:
@@ -186,27 +177,19 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
         h_page = h_doc[0]
         w, h = h_page.rect.width, h_page.rect.height
         
-        # --- POSITIONING LOGIC ---
+        # POS & SCALE
         if use_standard:
-            # Industry Standard: Start text at 130px (approx 1.8 inches)
             start_y = 130 + y_offset
         else:
-            # Auto-detect + user adjustment
             base_y = get_visible_content_bottom(h_page)
             start_y = base_y + 10 + y_offset 
 
-        # --- HEADER SCALING ---
-        # If scale is 100%, use full height (h). If 80%, use h * 0.8
         scaled_h = h * (header_scale / 100.0)
         
-        # Merge only Page 1
         p = out_doc.new_page(width=w, height=h)
-        # Draw header scaled
         p.show_pdf_page(fitz.Rect(0, 0, w, scaled_h), h_doc, 0)
-        # Draw text body
         p.show_pdf_page(fitz.Rect(0, start_y, w, h), d_doc, 0)
         
-        # Convert to Image
         pix = p.get_pixmap(dpi=100) 
         img_data = pix.tobytes("png")
         
@@ -226,7 +209,6 @@ def process_merge(header_file, data_file, mode, y_offset, header_scale, use_stan
     t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     out_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
     out_docx = tempfile.NamedTemporaryFile(delete=False, suffix=".docx").name
-    
     clean_paths = [t_header.name, t_data.name]
 
     try:
@@ -244,16 +226,13 @@ def process_merge(header_file, data_file, mode, y_offset, header_scale, use_stan
         h_page = h_doc[0]
         w, h = h_page.rect.width, h_page.rect.height
         
-        # --- POSITIONING ---
         if use_standard:
-            start_y = 130 + y_offset # 130px is a safe industry standard top margin
+            start_y = 130 + y_offset 
         else:
             base_y = get_visible_content_bottom(h_page)
             start_y = base_y + 10 + y_offset 
         
-        # --- SCALING ---
         scaled_h = h * (header_scale / 100.0)
-
         apply_all = (mode == "Apply to All Pages")
 
         for i in range(len(d_doc)):
@@ -373,28 +352,22 @@ tab1, tab2 = st.tabs(["📏 Layout", "📐 Header Sizer"])
 with tab1:
     mode = st.radio("Header Mode", ["Apply to First Page Only", "Apply to All Pages"], horizontal=True)
     st.markdown("---")
-    
-    # Standard Layout Toggle
-    use_standard = st.checkbox("✅ Use Industry Standard Gap (1.8 inches)", value=False, help="Forces the text to start at a standard position, ignoring the header file's size.")
-    
-    # Manual Adjust
-    y_offset = st.slider("Fine-Tune Position (+/-)", min_value=-100, max_value=100, value=0, help="Move text UP (negative) or DOWN (positive).")
+    use_standard = st.checkbox("✅ Use Industry Standard Gap (1.8 inches)", value=False)
+    y_offset = st.slider("Fine-Tune Position (+/-)", min_value=-100, max_value=100, value=0)
 
 with tab2:
     st.info("Shrink the header if it looks too big.")
-    header_scale = st.slider("Header Size %", min_value=50, max_value=100, value=100, help="100% is original size. 80% shrinks it.")
+    header_scale = st.slider("Header Size %", min_value=50, max_value=100, value=100)
 
-# FILENAME
 st.markdown("---")
 custom_name = st.text_input("Output Filename:", value="Bio_Farm_Doc")
 
-# PREVIEW
 if st.button("👁️ Show Preview (प्रीव्ह्यू पहा)"):
     if up_h and up_d:
         with st.spinner("Generating Preview..."):
             img_bytes = generate_preview(up_h, up_d, y_offset, header_scale, use_standard)
             if img_bytes:
-                st.image(img_bytes, caption="Preview of Page 1", use_container_width=True)
+                st.image(img_bytes, caption="Page 1 Preview", use_container_width=True)
             else:
                 st.error("Preview failed.")
     else:
