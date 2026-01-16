@@ -131,20 +131,27 @@ st.markdown("""
         opacity: 1;
     }
 
-    /* UPLOAD BOX */
+    /* --- UPLOAD BOX VISIBILITY FIX --- */
     div[data-testid="stFileUploader"] {
-    /* Use Streamlit's variable so it changes with the theme */
-    background-color: var(--secondary-background-color); 
-    border: 2px dashed #4caf50; /* Keep the Green Brand Border */
-    border-radius: 15px;
-    padding: 15px;
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        border: 2px dashed #4caf50;
+        border-radius: 15px;
+        padding: 15px;
     }
+    
+    /* Force Instructions to Green */
     div[data-testid="stFileUploader"] section div, 
     div[data-testid="stFileUploader"] section span,
     div[data-testid="stFileUploader"] section small {
-    color: var(--text-color) !important;
+        color: #1b5e20 !important;
     }
 
+    /* Force Uploaded File Name to BLACK and BOLD */
+    div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        font-size: 15px !important;
+    }
             
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
