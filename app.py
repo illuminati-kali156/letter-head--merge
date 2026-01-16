@@ -20,6 +20,8 @@ if "puzzle_sequence" not in st.session_state:
     st.session_state.puzzle_sequence = []
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
+if "preview_img" not in st.session_state:
+    st.session_state.preview_img = None
 
 # --- 3. FARM & NATURE THEME ---
 st.markdown("""
@@ -162,6 +164,52 @@ def get_visible_content_bottom(page):
     if max_y == 0: return page.rect.height * 0.15
     return max_y
 
+def generate_preview(header_file, data_file, y_offset):
+    """Generates an image of the first page for preview."""
+    t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    
+    clean_paths = [t_header.name, t_data.name]
+    
+    try:
+        t_header.write(header_file.getbuffer())
+        t_data.write(data_file.getbuffer())
+        t_header.close(); t_data.close()
+
+        try:
+            h_doc = fitz.open(t_header.name)
+            d_doc = fitz.open(t_data.name)
+        except:
+            return None
+
+        # Create a single page PDF in memory
+        out_doc = fitz.open()
+        h_page = h_doc[0]
+        w, h = h_page.rect.width, h_page.rect.height
+        
+        base_y = get_visible_content_bottom(h_page)
+        start_y = base_y + 10 + y_offset 
+        
+        # Merge only Page 1
+        p = out_doc.new_page(width=w, height=h)
+        p.show_pdf_page(fitz.Rect(0,0,w,h), h_doc, 0)
+        p.show_pdf_page(fitz.Rect(0,start_y,w,h), d_doc, 0)
+        
+        # Convert to Image (Pixmap)
+        pix = p.get_pixmap(dpi=100) # Low DPI for fast preview
+        img_data = pix.tobytes("png")
+        
+        h_doc.close(); d_doc.close(); out_doc.close()
+        return img_data
+
+    except:
+        return None
+    finally:
+        for p in clean_paths:
+            if os.path.exists(p):
+                try: os.remove(p)
+                except: pass
+
 def process_merge(header_file, data_file, mode, y_offset):
     t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
@@ -185,8 +233,6 @@ def process_merge(header_file, data_file, mode, y_offset):
         h_page = h_doc[0]
         w, h = h_page.rect.width, h_page.rect.height
         
-        # --- NEW LOGIC: Apply the Slider Offset here ---
-        # Default buffer is +10. We add the user's slider value to it.
         base_y = get_visible_content_bottom(h_page)
         start_y = base_y + 10 + y_offset 
         
@@ -301,20 +347,34 @@ with col2:
 
 # --- SETTINGS SECTION ---
 st.markdown("<br>", unsafe_allow_html=True)
-c1, c2 = st.columns(2)
+st.markdown("<div class='farm-card'>", unsafe_allow_html=True)
+st.markdown("### ⚙️ Adjust & Preview")
 
-with c1:
-    st.markdown("### ⚙️ Settings")
+# Two columns inside the card
+sc1, sc2 = st.columns(2)
+
+with sc1:
     mode = st.radio("Header Mode", ["Apply to First Page Only", "Apply to All Pages"])
+    st.markdown("<br>", unsafe_allow_html=True)
+    custom_name = st.text_input("Output Name:", value="Bio_Farm_Doc")
 
-with c2:
-    st.markdown("### 🎚️ Adjust Content Position")
-    # THE NEW SLIDER: Allows -50 to +50 pixel adjustment
-    y_offset = st.slider("Move Text Up/Down", min_value=-50, max_value=50, value=0, help="Negative moves text UP (less gap). Positive moves text DOWN (more gap).")
+with sc2:
+    # Slider
+    y_offset = st.slider("Vertical Position (Slider)", min_value=-50, max_value=200, value=0, help="Move text DOWN to make space for stamp.")
+    
+    # PREVIEW BUTTON
+    if st.button("👁️ Show Preview (प्रीव्ह्यू पहा)"):
+        if up_h and up_d:
+            with st.spinner("Generating Preview..."):
+                img_bytes = generate_preview(up_h, up_d, y_offset)
+                if img_bytes:
+                    st.image(img_bytes, caption="Page 1 Preview (First Page)", use_container_width=True)
+                else:
+                    st.error("Preview failed. Check files.")
+        else:
+            st.warning("Upload files first!")
 
-st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("### 🏷️ Filename")
-custom_name = st.text_input("Output Name:", value="Bio_Farm_Doc")
+st.markdown("</div>", unsafe_allow_html=True)
 
 # GENERATE
 st.markdown("<br>", unsafe_allow_html=True)
@@ -325,7 +385,6 @@ if st.button("🚜 GENERATE DOCUMENT (फाइल बनवा)"):
             time.sleep(0.5)
             st.write("⚙️ Merging with Custom Positioning...")
             
-            # Pass the y_offset to the function
             pdf, docx, err = process_merge(up_h, up_d, mode, y_offset)
             
             if err:
