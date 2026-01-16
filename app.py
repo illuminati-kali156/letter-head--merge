@@ -5,6 +5,8 @@ from pdf2docx import Converter
 import time
 import tempfile
 import hashlib
+import io
+from PIL import Image
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
@@ -20,13 +22,11 @@ if "puzzle_sequence" not in st.session_state:
     st.session_state.puzzle_sequence = []
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
-if "preview_img" not in st.session_state:
-    st.session_state.preview_img = None
 
-# --- 3. FARM & NATURE THEME ---
+# --- 3. FARM THEME & VISIBILITY CSS ---
 st.markdown("""
     <style>
-    /* GLOBAL FONTS & COLORS */
+    /* GLOBAL */
     .stApp {
         background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 50%, #e8f5e9 100%);
         font-family: 'Verdana', sans-serif;
@@ -55,8 +55,7 @@ st.markdown("""
 
     /* CARDS */
     .farm-card {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
+        background: rgba(255, 255, 255, 0.95);
         border: 2px solid #a5d6a7;
         border-radius: 20px;
         padding: 30px;
@@ -74,7 +73,6 @@ st.markdown("""
         border: 2px solid #4caf50 !important;
         color: #1b5e20 !important;
         text-align: center;
-        border-radius: 12px;
         font-weight: bold;
     }
 
@@ -87,52 +85,48 @@ st.markdown("""
         padding: 15px 32px;
         font-weight: bold;
         box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
     }
     .stButton button:hover {
         transform: translateY(-3px);
         box-shadow: 0 8px 15px rgba(0,0,0,0.3);
-        background: linear-gradient(145deg, #81c784, #4caf50);
-    }
-    .stButton button:disabled {
-        background-color: #e8f5e9;
-        color: #2e7d32;
-        border: 2px solid #2e7d32;
-        opacity: 1;
     }
 
     /* --- UPLOAD BOX VISIBILITY FIX --- */
+    
+    /* 1. Force the Upload Box Background to White */
     div[data-testid="stFileUploader"] {
-        background-color: #ffffff;
-        border: 2px dashed #4caf50;
-        border-radius: 15px;
+        background-color: #ffffff !important;
+        border: 2px dashed #1b5e20 !important;
         padding: 15px;
+        border-radius: 10px;
     }
-    div[data-testid="stFileUploader"] section[data-testid="stFileUploaderDropzone"] {
-        background-color: #f1f8e9;
-    }
-    div[data-testid="stFileUploader"] section div {
+
+    /* 2. Force Instruction Text ("Drag and drop") to Dark Green */
+    div[data-testid="stFileUploader"] section {
         color: #1b5e20 !important;
-        font-weight: bold;
     }
+    div[data-testid="stFileUploader"] section span {
+        color: #1b5e20 !important;
+        font-weight: bold !important;
+    }
+    
+    /* 3. Force Small Text ("Limit 200MB") to Grey */
     div[data-testid="stFileUploader"] section small {
-        color: #388e3c !important;
+        color: #666666 !important;
     }
-    div[data-testid="stFileUploader"] section button {
+
+    /* 4. Force Uploaded File Name to BLACK */
+    div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        font-size: 14px !important;
+    }
+
+    /* 5. Force the "Browse files" button */
+    div[data-testid="stFileUploader"] button {
         background-color: #4caf50 !important;
         color: white !important;
-        border: none;
-    }
-    div[data-testid="stFileUploader"] ul {
-        background-color: white !important;
-    }
-    div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
-        color: #000000 !important; 
-        font-weight: 900 !important;
-        font-size: 16px !important;
-    }
-    div[data-testid="stFileUploader"] div[data-testid="stFileUploaderFile"] small {
-        color: #333333 !important;
+        border: none !important;
     }
 
     #MainMenu {visibility: hidden;}
@@ -144,38 +138,60 @@ st.markdown("""
     <div class="leaf" style="left: 70%; animation-duration: 10s;">🍃</div>
 """, unsafe_allow_html=True)
 
-# --- 4. BACKEND LOGIC ---
+# --- 4. BACKEND LOGIC (SMART IMAGE HANDLER) ---
 
 def get_visible_content_bottom(page):
+    """Finds the lowest point of content on a PDF page."""
     max_y = 0
-    for block in page.get_text("blocks"):
-        if block[3] > max_y: max_y = block[3]
-    for img in page.get_images(full=True):
-        for r in page.get_image_rects(img[0]):
-            if r.y1 > max_y: max_y = r.y1
+    try:
+        for block in page.get_text("blocks"):
+            if block[3] > max_y: max_y = block[3]
+        for img in page.get_images(full=True):
+            for r in page.get_image_rects(img[0]):
+                if r.y1 > max_y: max_y = r.y1
+    except:
+        pass
     if max_y == 0: return page.rect.height * 0.15
     return max_y
 
-def generate_preview(header_file, data_file, y_offset, header_scale, use_standard):
-    # Temp Files
-    t_header = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(header_file.name)[1])
-    t_data = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(data_file.name)[1])
-    clean_paths = [t_header.name, t_data.name]
-    
-    try:
-        t_header.write(header_file.getbuffer())
-        t_data.write(data_file.getbuffer())
-        t_header.close(); t_data.close()
+def convert_to_pdf_doc(uploaded_file):
+    """
+    Helper: Takes any uploaded file (PDF, PNG, JPG) and returns a PyMuPDF Document object.
+    """
+    file_bytes = uploaded_file.read()
+    filename = uploaded_file.name.lower()
+    uploaded_file.seek(0) # Reset pointer
 
-        if t_data.name.endswith(".docx"):
-            return None 
-
+    # 1. If PDF, open directly
+    if filename.endswith(".pdf"):
         try:
-            h_doc = fitz.open(t_header.name)
-            d_doc = fitz.open(t_data.name)
+            return fitz.open(stream=file_bytes, filetype="pdf")
         except:
             return None
 
+    # 2. If Image, convert to PDF in memory
+    if filename.endswith((".png", ".jpg", ".jpeg")):
+        try:
+            # Use PyMuPDF to open image and convert to PDF
+            img_doc = fitz.open(stream=file_bytes, filetype=filename.split('.')[-1])
+            pdf_bytes = img_doc.convert_to_pdf()
+            img_doc.close()
+            return fitz.open("pdf", pdf_bytes)
+        except:
+            return None
+    
+    return None
+
+def generate_preview(header_file, data_file, y_offset, header_scale, use_standard):
+    try:
+        # Convert inputs to standardized PDF Docs (Handles Images automatically)
+        h_doc = convert_to_pdf_doc(header_file)
+        d_doc = convert_to_pdf_doc(data_file)
+
+        if not h_doc or not d_doc:
+            return None
+
+        # Create output canvas
         out_doc = fitz.open()
         h_page = h_doc[0]
         w, h = h_page.rect.width, h_page.rect.height
@@ -189,52 +205,50 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
 
         scaled_h = h * (header_scale / 100.0)
         
+        # Create Page 1
         p = out_doc.new_page(width=w, height=h)
+        
+        # Draw Header
         p.show_pdf_page(fitz.Rect(0, 0, w, scaled_h), h_doc, 0)
+        
+        # Draw Body
         p.show_pdf_page(fitz.Rect(0, start_y, w, h), d_doc, 0)
         
+        # Render Image
         pix = p.get_pixmap(dpi=100) 
         img_data = pix.tobytes("png")
         
         h_doc.close(); d_doc.close(); out_doc.close()
         return img_data
 
-    except:
+    except Exception as e:
+        print(f"Preview Error: {e}")
         return None
-    finally:
-        for p in clean_paths:
-            if os.path.exists(p):
-                try: os.remove(p)
-                except: pass
 
 def process_merge(header_file, data_file, mode, y_offset, header_scale, use_standard):
-    ext_h = os.path.splitext(header_file.name)[1].lower()
-    ext_d = os.path.splitext(data_file.name)[1].lower()
-
-    t_header = tempfile.NamedTemporaryFile(delete=False, suffix=ext_h)
-    t_data = tempfile.NamedTemporaryFile(delete=False, suffix=ext_d)
+    t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
     out_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
     out_docx = tempfile.NamedTemporaryFile(delete=False, suffix=".docx").name
     clean_paths = [t_header.name, t_data.name]
 
     try:
-        t_header.write(header_file.getbuffer())
-        t_data.write(data_file.getbuffer())
-        t_header.close(); t_data.close()
+        # Check for DOCX (Server limitation)
+        if data_file.name.lower().endswith(".docx"):
+            return None, None, "Please upload PDF or Image. (Word conversion requires dedicated server)"
 
-        if ext_d == ".docx":
-            return None, None, "Please save your Word file as PDF first. (Server limitation)"
+        # Convert inputs to PDF Docs
+        h_doc = convert_to_pdf_doc(header_file)
+        d_doc = convert_to_pdf_doc(data_file)
 
-        try:
-            h_doc = fitz.open(t_header.name)
-            d_doc = fitz.open(t_data.name)
-        except:
-            return None, None, "File type not supported. Use PDF or Image."
+        if not h_doc or not d_doc:
+            return None, None, "Could not read files. Ensure they are valid PDF or Images."
 
         out_doc = fitz.open()
         h_page = h_doc[0]
         w, h = h_page.rect.width, h_page.rect.height
         
+        # Positioning Logic
         if use_standard:
             start_y = 130 + y_offset 
         else:
@@ -244,6 +258,7 @@ def process_merge(header_file, data_file, mode, y_offset, header_scale, use_stan
         scaled_h = h * (header_scale / 100.0)
         apply_all = (mode == "Apply to All Pages")
 
+        # Merge Loop
         for i in range(len(d_doc)):
             if i == 0 or apply_all:
                 p = out_doc.new_page(width=w, height=h)
@@ -255,6 +270,7 @@ def process_merge(header_file, data_file, mode, y_offset, header_scale, use_stan
         out_doc.save(out_pdf)
         h_doc.close(); d_doc.close(); out_doc.close()
 
+        # Create Word version
         cv = Converter(out_pdf)
         cv.convert(out_docx)
         cv.close()
@@ -349,7 +365,7 @@ with col1:
     up_h = st.file_uploader("Header", type=["pdf","png","jpg","jpeg"], label_visibility="collapsed", key="h")
 with col2:
     st.markdown("<div class='farm-card'><h3>📝 Content</h3><p>Upload Body (PDF/IMG)</p></div>", unsafe_allow_html=True)
-    up_d = st.file_uploader("Data", type=["pdf","png","jpg","jpeg","docx"], label_visibility="collapsed", key="d")
+    up_d = st.file_uploader("Data", type=["pdf","png","jpg","jpeg"], label_visibility="collapsed", key="d")
 
 # --- SETTINGS SECTION ---
 st.markdown("<br>", unsafe_allow_html=True)
@@ -361,7 +377,6 @@ tab1, tab2 = st.tabs(["📏 Layout", "📐 Header Sizer"])
 with tab1:
     mode = st.radio("Header Mode", ["Apply to First Page Only", "Apply to All Pages"], horizontal=True)
     st.markdown("---")
-    # --- BUG FIX: THIS LINE IS NOW ONE SINGLE LINE ---
     use_standard = st.checkbox("✅ Use Industry Standard Gap (1.8 inches)", value=False)
     y_offset = st.slider("Fine-Tune Position (+/-)", min_value=-100, max_value=200, value=0)
 
@@ -379,7 +394,7 @@ if st.button("👁️ Show Preview (प्रीव्ह्यू पहा)"):
             if img_bytes:
                 st.image(img_bytes, caption="Page 1 Preview", use_container_width=True)
             else:
-                st.error("Preview not available for Word files or invalid inputs.")
+                st.error("Preview failed. Ensure valid files.")
     else:
         st.warning("Upload files first!")
 
