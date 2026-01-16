@@ -133,12 +133,19 @@ st.markdown("""
 
     /* UPLOAD BOX */
     div[data-testid="stFileUploader"] {
-        background-color: rgba(255, 255, 255, 0.6);
-        border: 2px dashed #4caf50;
-        border-radius: 15px;
-        padding: 10px;
+    /* Use Streamlit's variable so it changes with the theme */
+    background-color: var(--secondary-background-color); 
+    border: 2px dashed #4caf50; /* Keep the Green Brand Border */
+    border-radius: 15px;
+    padding: 15px;
+    }
+    div[data-testid="stFileUploader"] section div, 
+    div[data-testid="stFileUploader"] section span,
+    div[data-testid="stFileUploader"] section small {
+    color: var(--text-color) !important;
     }
 
+            
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     </style>
