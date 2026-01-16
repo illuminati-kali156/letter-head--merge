@@ -5,14 +5,14 @@ from pdf2docx import Converter
 import time
 import tempfile
 import hashlib
-import io
 from PIL import Image
 
-# --- 1. PAGE CONFIGURATION ---
+# --- 1. PAGE CONFIGURATION (FORCE LIGHT MODE) ---
 st.set_page_config(
     page_title="Super AAI Bio Energy",
     page_icon="🌾",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 # --- 2. SESSION STATE ---
@@ -23,10 +23,19 @@ if "puzzle_sequence" not in st.session_state:
 if "login_msg" not in st.session_state:
     st.session_state.login_msg = ""
 
-# --- 3. FARM THEME & VISIBILITY CSS ---
+# --- 3. FARM THEME (FORCED OVERRIDE) ---
 st.markdown("""
     <style>
-    /* GLOBAL */
+    /* FORCE LIGHT MODE COLORS */
+    :root {
+        --primary-color: #4caf50;
+        --background-color: #ffffff;
+        --secondary-background-color: #f0f2f6;
+        --text-color: #1b5e20;
+        --font: "Verdana", sans-serif;
+    }
+
+    /* BACKGROUND */
     .stApp {
         background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 50%, #e8f5e9 100%);
         font-family: 'Verdana', sans-serif;
@@ -91,42 +100,41 @@ st.markdown("""
         box-shadow: 0 8px 15px rgba(0,0,0,0.3);
     }
 
-    /* --- UPLOAD BOX VISIBILITY FIX --- */
+    /* --- UPLOAD BOX VISIBILITY FIX (CRITICAL) --- */
     
-    /* 1. Force the Upload Box Background to White */
-    div[data-testid="stFileUploader"] {
+    /* 1. Target the uploader container directly */
+    [data-testid='stFileUploader'] {
         background-color: #ffffff !important;
-        border: 2px dashed #1b5e20 !important;
-        padding: 15px;
-        border-radius: 10px;
+        border: 2px dashed #4caf50 !important;
+        padding: 20px !important;
+        border-radius: 15px !important;
     }
 
-    /* 2. Force Instruction Text ("Drag and drop") to Dark Green */
-    div[data-testid="stFileUploader"] section {
-        color: #1b5e20 !important;
-    }
-    div[data-testid="stFileUploader"] section span {
-        color: #1b5e20 !important;
-        font-weight: bold !important;
+    /* 2. Target the uploaded file item (the list) */
+    [data-testid='stFileUploader'] section {
+        background-color: #f1f8e9 !important; /* Light Green bg for file list */
+        color: #000000 !important;
     }
     
-    /* 3. Force Small Text ("Limit 200MB") to Grey */
-    div[data-testid="stFileUploader"] section small {
-        color: #666666 !important;
-    }
-
-    /* 4. Force Uploaded File Name to BLACK */
-    div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
-        color: #000000 !important;
+    /* 3. Force Filename Text to be BLACK and BOLD */
+    [data-testid='stFileUploader'] div[data-testid='stMarkdownContainer'] p {
+        color: #000000 !important; 
         font-weight: 900 !important;
-        font-size: 14px !important;
+        font-size: 15px !important;
+        text-shadow: none !important;
     }
 
-    /* 5. Force the "Browse files" button */
-    div[data-testid="stFileUploader"] button {
-        background-color: #4caf50 !important;
-        color: white !important;
-        border: none !important;
+    /* 4. Force "Browse Files" button to look correct */
+    [data-testid='stFileUploader'] button {
+        border: 1px solid #4caf50 !important;
+        color: #4caf50 !important;
+        background: white !important;
+    }
+
+    /* 5. Force "Limit 200MB" text to be visible */
+    [data-testid='stFileUploader'] small {
+        color: #555555 !important;
+        display: block !important;
     }
 
     #MainMenu {visibility: hidden;}
@@ -138,7 +146,7 @@ st.markdown("""
     <div class="leaf" style="left: 70%; animation-duration: 10s;">🍃</div>
 """, unsafe_allow_html=True)
 
-# --- 4. BACKEND LOGIC (SMART IMAGE HANDLER) ---
+# --- 4. BACKEND LOGIC ---
 
 def get_visible_content_bottom(page):
     """Finds the lowest point of content on a PDF page."""
@@ -155,9 +163,7 @@ def get_visible_content_bottom(page):
     return max_y
 
 def convert_to_pdf_doc(uploaded_file):
-    """
-    Helper: Takes any uploaded file (PDF, PNG, JPG) and returns a PyMuPDF Document object.
-    """
+    """Helper: Takes any uploaded file (PDF, PNG, JPG) and returns a PyMuPDF Document object."""
     file_bytes = uploaded_file.read()
     filename = uploaded_file.name.lower()
     uploaded_file.seek(0) # Reset pointer
@@ -172,7 +178,6 @@ def convert_to_pdf_doc(uploaded_file):
     # 2. If Image, convert to PDF in memory
     if filename.endswith((".png", ".jpg", ".jpeg")):
         try:
-            # Use PyMuPDF to open image and convert to PDF
             img_doc = fitz.open(stream=file_bytes, filetype=filename.split('.')[-1])
             pdf_bytes = img_doc.convert_to_pdf()
             img_doc.close()
@@ -184,14 +189,12 @@ def convert_to_pdf_doc(uploaded_file):
 
 def generate_preview(header_file, data_file, y_offset, header_scale, use_standard):
     try:
-        # Convert inputs to standardized PDF Docs (Handles Images automatically)
         h_doc = convert_to_pdf_doc(header_file)
         d_doc = convert_to_pdf_doc(data_file)
 
         if not h_doc or not d_doc:
             return None
 
-        # Create output canvas
         out_doc = fitz.open()
         h_page = h_doc[0]
         w, h = h_page.rect.width, h_page.rect.height
@@ -205,16 +208,10 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
 
         scaled_h = h * (header_scale / 100.0)
         
-        # Create Page 1
         p = out_doc.new_page(width=w, height=h)
-        
-        # Draw Header
         p.show_pdf_page(fitz.Rect(0, 0, w, scaled_h), h_doc, 0)
-        
-        # Draw Body
         p.show_pdf_page(fitz.Rect(0, start_y, w, h), d_doc, 0)
         
-        # Render Image
         pix = p.get_pixmap(dpi=100) 
         img_data = pix.tobytes("png")
         
@@ -222,22 +219,29 @@ def generate_preview(header_file, data_file, y_offset, header_scale, use_standar
         return img_data
 
     except Exception as e:
-        print(f"Preview Error: {e}")
         return None
 
 def process_merge(header_file, data_file, mode, y_offset, header_scale, use_standard):
-    t_header = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
-    t_data = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    # Temp files logic
+    ext_h = os.path.splitext(header_file.name)[1].lower()
+    ext_d = os.path.splitext(data_file.name)[1].lower()
+
+    t_header = tempfile.NamedTemporaryFile(delete=False, suffix=ext_h)
+    t_data = tempfile.NamedTemporaryFile(delete=False, suffix=ext_d)
     out_pdf = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf").name
     out_docx = tempfile.NamedTemporaryFile(delete=False, suffix=".docx").name
     clean_paths = [t_header.name, t_data.name]
 
     try:
-        # Check for DOCX (Server limitation)
-        if data_file.name.lower().endswith(".docx"):
-            return None, None, "Please upload PDF or Image. (Word conversion requires dedicated server)"
+        t_header.write(header_file.getbuffer())
+        t_data.write(data_file.getbuffer())
+        t_header.close(); t_data.close()
 
-        # Convert inputs to PDF Docs
+        # Word File Rejection (Stability Check)
+        if ext_d == ".docx":
+            return None, None, "Please upload PDF or Image. (Word conversion disabled for stability)"
+
+        # Convert to PDF Docs
         h_doc = convert_to_pdf_doc(header_file)
         d_doc = convert_to_pdf_doc(data_file)
 
