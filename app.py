@@ -132,25 +132,43 @@ st.markdown("""
     }
 
     /* --- UPLOAD BOX VISIBILITY FIX --- */
-    div[data-testid="stFileUploader"] {
-        background-color: rgba(255, 255, 255, 0.8) !important;
-        border: 2px dashed #4caf50;
-        border-radius: 15px;
-        padding: 15px;
-    }
     
-    /* Force Instructions to Green */
-    div[data-testid="stFileUploader"] section div, 
-    div[data-testid="stFileUploader"] section span,
-    div[data-testid="stFileUploader"] section small {
-        color: #1b5e20 !important;
+    /* 1. Main Container (White Background) */
+    [data-testid='stFileUploader'] {
+        background-color: #ffffff !important;
+        border: 2px dashed #4caf50 !important;
+        padding: 15px;
+        border-radius: 15px;
     }
 
-    /* Force Uploaded File Name to BLACK and BOLD */
-    div[data-testid="stFileUploader"] div[data-testid="stMarkdownContainer"] p {
+    /* 2. Dropzone Text (The instructions) */
+    [data-testid='stFileUploader'] section {
+        background-color: #f1f8e9 !important; /* Light Green for Dropzone */
+    }
+    [data-testid='stFileUploader'] section > div,
+    [data-testid='stFileUploader'] section > div > span,
+    [data-testid='stFileUploader'] section > div > small {
+        color: #1b5e20 !important; /* Dark Green Text */
+    }
+
+    /* 3. Uploaded File Item (The list item itself) */
+    [data-testid='stFileUploaderFile'] {
+        background-color: #ffffff !important;
+        border: 1px solid #cccccc !important;
+    }
+
+    /* 4. THE FILENAME (Crucial Fix) */
+    [data-testid='stFileUploaderFile'] > div {
         color: #000000 !important;
         font-weight: 900 !important;
         font-size: 15px !important;
+        text-shadow: none !important;
+    }
+    
+    /* 5. The Delete (X) Button */
+    [data-testid='stFileUploaderDeleteBtn'] {
+        color: #d32f2f !important;
+        background-color: transparent !important;
     }
             
     #MainMenu {visibility: hidden;}
